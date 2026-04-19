@@ -1,16 +1,44 @@
-# React + Vite
+# TeamSync
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A team management application built with React, Vite, and Firebase.
 
-Currently, two official plugins are available:
+## Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- **Authentication**: Login system with role-based access
+- **Admin Dashboard**: Manage team members, projects, and tasks
+- **Member Dashboard**: View personal tasks and team activity
+- **Project Management**: Create and track team projects
+- **Task Management**: Assign and track tasks with priorities
 
-## React Compiler
+## Roles
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- **Admin**: Full access to manage members, projects, and tasks
+- **Member**: View assigned tasks and team projects
+- **Viewer**: Read-only access to projects
 
-## Expanding the ESLint configuration
+## Tech Stack
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- React 19
+- Vite 8
+- React Router 7
+- Firebase
+
+## Getting Started
+
+```bash
+npm install
+npm run dev
+```
+
+## Routes
+
+| Path | Description |
+|------|-------------|
+| `/login` | Login page |
+| `/admin/dashboard` | Admin dashboard |
+| `/admin/members` | Manage team members |
+| `/admin/projects` | Manage projects |
+| `/admin/tasks` | Manage all tasks |
+| `/dashboard` | Member dashboard |
+| `/my-tasks` | Current user's tasks |
+| `/team-view` | Team overview |
