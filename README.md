@@ -12,9 +12,10 @@ A team management application built with React, Vite, and Firebase.
 
 ## Roles
 
-- **Admin**: Full access to manage members, projects, and tasks
-- **Member**: View assigned tasks and team projects
-- **Viewer**: Read-only access to projects
+- **Admin**: Full access to manage members, projects, and tasks (including delete)
+- **Project Lead (PM)**: Can create/assign tasks, edit any task, manage their project's members
+- **Member**: View and edit own tasks, change task status
+- **Viewer**: Read-only access
 
 ## Tech Stack
 

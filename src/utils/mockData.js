@@ -1,16 +1,16 @@
 export const mockMembers = [
-  { id: "u1", name: "Khaleel Aminu", email: "khaleel@teamsync.io", role: "admin", color: "#99977C", createdAt: "Apr 1, 2025" },
-  { id: "u2", name: "Tunde Musa", email: "tunde@teamsync.io", role: "member", color: "#7EB8C9", createdAt: "Apr 3, 2025" },
+  { id: "u1", name: "Khaleel ", email: "khaleel@teamsync.io", role: "admin", color: "#99977C", createdAt: "Apr 1, 2025" },
+  { id: "u2", name: "Tunde Musa", email: "tunde@teamsync.io", role: "pm", color: "#7EB8C9", createdAt: "Apr 3, 2025" },
   { id: "u3", name: "Aisha Okonkwo", email: "aisha@teamsync.io", role: "member", color: "#C97E8A", createdAt: "Apr 3, 2025" },
   { id: "u4", name: "Rasheed Bello", email: "rasheed@teamsync.io", role: "member", color: "#85C98A", createdAt: "Apr 5, 2025" },
   { id: "u5", name: "Ngozi Eze", email: "ngozi@teamsync.io", role: "viewer", color: "#C9A84C", createdAt: "Apr 6, 2025" },
 ]
 
 export const mockProjects = [
-  { id: "p1", name: "NexaFlow Rebrand", description: "Full brand overhaul including logo, web, and social assets.", memberIds: ["u1", "u2", "u3"], status: "active", createdAt: "Apr 2, 2025" },
-  { id: "p2", name: "Backend Sprint Q2", description: "API refactor, auth improvements, and database optimizations.", memberIds: ["u1", "u3", "u4"], status: "active", createdAt: "Apr 4, 2025" },
-  { id: "p3", name: "Mobile App MVP", description: "React Native MVP for iOS and Android launch.", memberIds: ["u2", "u4", "u5"], status: "active", createdAt: "Apr 7, 2025" },
-  { id: "p4", name: "Marketing Site v2", description: "Redesign and rebuild of the public marketing website.", memberIds: ["u1", "u2"], status: "completed", createdAt: "Mar 20, 2025" },
+  { id: "p1", name: "NexaFlow Rebrand", description: "Full brand overhaul including logo, web, and social assets.", leadId: "u2", memberIds: ["u1", "u2", "u3"], status: "active", createdAt: "Apr 2, 2025" },
+  { id: "p2", name: "Backend Sprint Q2", description: "API refactor, auth improvements, and database optimizations.", leadId: "u2", memberIds: ["u1", "u3", "u4"], status: "active", createdAt: "Apr 4, 2025" },
+  { id: "p3", name: "Mobile App MVP", description: "React Native MVP for iOS and Android launch.", leadId: "u2", memberIds: ["u2", "u4", "u5"], status: "active", createdAt: "Apr 7, 2025" },
+  { id: "p4", name: "Marketing Site v2", description: "Redesign and rebuild of the public marketing website.", leadId: "u2", memberIds: ["u1", "u2"], status: "completed", createdAt: "Mar 20, 2025" },
 ]
 
 export const mockTasks = [

@@ -5,12 +5,12 @@ import { mockMembers } from "../../utils/mockData"
 
 const adminUser = mockMembers[0]
 
-const memberColors = ["#7EB8C9", "#C97E8A", "#85C98A", "#C9A84C", "#A07EC9", "#C9907E", "#7EC9B8"]
+const defaultColors = ["#7EB8C9", "#C97E8A", "#85C98A", "#C9A84C", "#A07EC9", "#C9907E", "#7EC9B8"]
 
 export default function ManageMembers() {
   const [members, setMembers] = useState(mockMembers)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "member", color: memberColors[0] })
+  const [form, setForm] = useState({ name: "", email: "", password: "", role: "member", color: defaultColors[0] })
 
   const handleAdd = () => {
     if (!form.name || !form.email) return
@@ -20,7 +20,7 @@ export default function ManageMembers() {
       createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     }
     setMembers(prev => [...prev, newMember])
-    setForm({ name: "", email: "", password: "", role: "member", color: memberColors[0] })
+    setForm({ name: "", email: "", password: "", role: "member", color: defaultColors[0] })
     setShowForm(false)
   }
 
@@ -47,24 +47,36 @@ export default function ManageMembers() {
               onChange={e => setForm({ ...form, role: e.target.value })}
               options={[
                 { value: "member", label: "Member" },
+                { value: "pm", label: "Project Lead" },
                 { value: "viewer", label: "Viewer" },
               ]}
             />
           </div>
           <div style={{ marginBottom: 20 }}>
             <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: 8 }}>Member color</label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {memberColors.map(c => (
-                <button
-                  key={c}
-                  onClick={() => setForm({ ...form, color: c })}
-                  style={{
-                    width: 28, height: 28, borderRadius: "50%", background: c,
-                    border: form.color === c ? "3px solid var(--text)" : "3px solid transparent",
-                    cursor: "pointer",
-                  }}
+            <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <div style={{ display: "flex", gap: 6 }}>
+                {defaultColors.map(c => (
+                  <button
+                    key={c}
+                    onClick={() => setForm({ ...form, color: c })}
+                    style={{
+                      width: 28, height: 28, borderRadius: "50%", background: c,
+                      border: form.color === c ? "3px solid var(--text)" : "3px solid transparent",
+                      cursor: "pointer",
+                    }}
+                  />
+                ))}
+              </div>
+              <label style={{ display: "flex", alignItems: "center", gap: 6, cursor: "pointer", fontSize: 12, color: "var(--muted)" }}>
+                <input
+                  type="color"
+                  value={form.color}
+                  onChange={e => setForm({ ...form, color: e.target.value })}
+                  style={{ width: 28, height: 28, border: "none", cursor: "pointer", borderRadius: 4 }}
                 />
-              ))}
+                Custom
+              </label>
             </div>
           </div>
           <Btn onClick={handleAdd}>Create account</Btn>
@@ -101,7 +113,7 @@ export default function ManageMembers() {
               <p style={{ fontSize: 12, color: "var(--muted)" }}>{m.email}</p>
               <Badge
                 label={m.role}
-                color={m.role === "admin" ? "gold" : m.role === "member" ? "accent" : "muted"}
+                color={m.role === "admin" ? "gold" : m.role === "pm" ? "blue" : m.role === "member" ? "accent" : "muted"}
               />
               <p style={{ fontSize: 12, color: "var(--muted)" }}>{m.createdAt}</p>
               <div style={{ display: "flex", gap: 6, justifyContent: "flex-end" }}>

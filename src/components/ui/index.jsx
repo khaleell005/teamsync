@@ -3,6 +3,7 @@ export function Badge({ label, color = "accent" }) {
   const colors = {
     accent: { bg: "rgba(153,151,124,0.15)", text: "#99977C", border: "rgba(153,151,124,0.3)" },
     gold: { bg: "rgba(201,168,76,0.15)", text: "#C9A84C", border: "rgba(201,168,76,0.3)" },
+    blue: { bg: "rgba(100,140,200,0.15)", text: "#5C8CC8", border: "rgba(100,140,200,0.3)" },
     muted: { bg: "rgba(168,159,148,0.12)", text: "#a89f94", border: "rgba(168,159,148,0.2)" },
     danger: { bg: "rgba(201,100,76,0.15)", text: "#C9714C", border: "rgba(201,100,76,0.3)" },
     success: { bg: "rgba(100,168,100,0.15)", text: "#7CB87C", border: "rgba(100,168,100,0.3)" },

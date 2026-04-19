@@ -8,7 +8,7 @@ const adminUser = mockMembers[0]
 export default function ManageProjects() {
   const [projects, setProjects] = useState(mockProjects)
   const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: "", description: "", memberIds: [] })
+  const [form, setForm] = useState({ name: "", description: "", leadId: "", memberIds: [] })
 
   const getUser = (id) => mockMembers.find(m => m.id === id)
   const getTaskCount = (pid) => mockTasks.filter(t => t.projectId === pid).length
@@ -28,7 +28,7 @@ export default function ManageProjects() {
       status: "active",
       createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     }])
-    setForm({ name: "", description: "", memberIds: [] })
+    setForm({ name: "", description: "", leadId: "", memberIds: [] })
     setShowForm(false)
   }
 
@@ -49,6 +49,27 @@ export default function ManageProjects() {
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Create project</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
             <Input label="Project name" placeholder="e.g. NexaFlow Rebrand" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            <div>
+              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: 10 }}>Project Lead</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+                {mockMembers.filter(m => m.role === "pm" || m.role === "member").map(m => (
+                  <button
+                    key={m.id}
+                    onClick={() => setForm({ ...form, leadId: m.id })}
+                    style={{
+                      display: "flex", alignItems: "center", gap: 8, padding: "6px 12px",
+                      borderRadius: 99, cursor: "pointer", transition: "all 0.15s",
+                      background: form.leadId === m.id ? "rgba(153,151,124,0.2)" : "var(--surface)",
+                      border: form.leadId === m.id ? "1px solid var(--accent)" : "1px solid rgba(153,151,124,0.2)",
+                      color: form.leadId === m.id ? "var(--text)" : "var(--muted)",
+                    }}
+                  >
+                    <Avatar name={m.name} color={m.color} size={20} />
+                    <span style={{ fontSize: 12 }}>{m.name}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>Description</label>
               <textarea
@@ -106,9 +127,15 @@ export default function ManageProjects() {
 
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
               <div style={{ display: "flex", alignItems: "center" }}>
+                {p.leadId && getUser(p.leadId) && (
+                  <div style={{ marginRight: 8, display: "flex", alignItems: "center", gap: 4 }}>
+                    <span style={{ fontSize: 10, color: "var(--muted)" }}>Lead:</span>
+                    <Avatar name={getUser(p.leadId).name} color={getUser(p.leadId).color} size={22} />
+                  </div>
+                )}
                 {p.memberIds.map(mid => {
                   const m = getUser(mid)
-                  return m ? <div key={mid} style={{ marginRight: -6 }} title={m.name}><Avatar name={m.name} color={m.color} size={26} /></div> : null
+                  return m && m.id !== p.leadId ? <div key={mid} style={{ marginRight: -6 }} title={m.name}><Avatar name={m.name} color={m.color} size={26} /></div> : null
                 })}
                 <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 14 }}>{p.memberIds.length} members</span>
               </div>
