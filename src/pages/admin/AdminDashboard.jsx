@@ -1,27 +1,33 @@
+import { useState, useEffect } from "react"
 import Layout from "../../components/layout/Layout"
 import { StatCard, Card, Badge, StatusBadge, PriorityDot, Avatar, PageHeader, Btn } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const getStoredUser = () => {
-  try {
-    const stored = localStorage.getItem("teamsync_user")
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
 export default function AdminDashboard() {
-  const currentUser = getStoredUser()
+  const [currentUser, setCurrentUser] = useState(null)
+  const [ready, setReady] = useState(false)
 
-  if (!currentUser) {
-    window.location.href = "/login"
-    return null
-  }
-  if (currentUser.role !== "admin") {
-    window.location.href = "/dashboard"
-    return null
-  }
+  useEffect(() => {
+    const checkAuth = () => {
+      const stored = localStorage.getItem("teamsync_user")
+      if (!stored) {
+        window.location.href = "/login"
+        return false
+      }
+      const user = JSON.parse(stored)
+      if (user.role !== "admin") {
+        window.location.href = "/dashboard"
+        return false
+      }
+      setCurrentUser(user)
+      return true
+    }
+    if (checkAuth()) {
+      setReady(true)
+    }
+  }, [])
+
+  if (!ready || !currentUser) return <div style={{ padding: 40, textAlign: "center", color: "var(--text)" }}>Loading...</div>
 
   const adminUser = currentUser
   const activeTasks = mockTasks.filter(t => t.status !== "completed")

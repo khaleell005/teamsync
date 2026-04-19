@@ -1,35 +1,44 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Layout from "../../components/layout/Layout"
 import { Card, Avatar, Badge, StatusBadge, PriorityDot, Btn, Input, Select, PageHeader, Divider, EmptyState } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const getStoredUser = () => {
-  try {
-    const stored = localStorage.getItem("teamsync_user")
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
 export default function ManageTasks() {
-  const currentUser = getStoredUser()
-  const [tasks, setTasks] = useState(mockTasks)
+  const [state, setState] = useState({
+    user: null,
+    ready: false,
+    tasks: mockTasks,
+    showForm: false,
+    filter: "all",
+    editingId: null,
+    form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" }
+  })
 
-  if (!currentUser) {
-    window.location.href = "/login"
-    return null
-  }
-  if (currentUser.role !== "admin") {
-    window.location.href = "/dashboard"
-    return null
+  useEffect(() => {
+    const stored = localStorage.getItem("teamsync_user")
+    if (stored) {
+      const user = JSON.parse(stored)
+      if (user.role === "admin") {
+        setState(s => ({ ...s, user, ready: true }))
+      } else {
+        window.location.href = "/dashboard"
+      }
+    } else {
+      window.location.href = "/login"
+    }
+  }, [])
+
+  if (!state.ready || !state.user) {
+    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "var(--base)", color: "var(--text)" }}>Loading...</div>
   }
 
-  const adminUser = currentUser
-  const [showForm, setShowForm] = useState(false)
-  const [filter, setFilter] = useState("all")
-  const [editingId, setEditingId] = useState(null)
-  const [form, setForm] = useState({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" })
+  const adminUser = state.user
+  const tasks = state.tasks
+  const showForm = state.showForm
+  const filter = state.filter
+  const editingId = state.editingId
+  const form = state.form
+  const updateState = (updates) => setState(s => ({ ...s, ...updates }))
 
   const getUser = (id) => mockMembers.find(m => m.id === id)
   const getProject = (id) => mockProjects.find(p => p.id === id)
@@ -38,38 +47,47 @@ export default function ManageTasks() {
 
   const handleAdd = () => {
     if (!form.title || !form.projectId) return
-    setTasks(prev => [...prev, {
+    const newTask = {
       id: `t${Date.now()}`,
       ...form,
       assignedTo: form.assignedTo || null,
       status: "not_started",
       progressNote: "",
       createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    }])
-    setForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" })
-    setShowForm(false)
+    }
+    updateState({
+      tasks: [...state.tasks, newTask],
+      form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
+      showForm: false
+    })
   }
 
-  const handleDelete = (id) => setTasks(prev => prev.filter(t => t.id !== id))
+  const handleDelete = (id) => updateState({ tasks: state.tasks.filter(t => t.id !== id) })
 
   const handleEdit = (task) => {
-    setForm({ title: task.title, description: task.description || "", projectId: task.projectId, assignedTo: task.assignedTo || "", priority: task.priority, deadline: task.deadline || "" })
-    setEditingId(task.id)
-    setShowForm(true)
+    updateState({
+      form: { title: task.title, description: task.description || "", projectId: task.projectId, assignedTo: task.assignedTo || "", priority: task.priority, deadline: task.deadline || "" },
+      editingId: task.id,
+      showForm: true
+    })
   }
 
   const handleUpdate = () => {
     if (!form.title || !form.projectId) return
-    setTasks(prev => prev.map(t => t.id === editingId ? { ...t, ...form, assignedTo: form.assignedTo || null } : t))
-    setForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" })
-    setEditingId(null)
-    setShowForm(false)
+    updateState({
+      tasks: state.tasks.map(t => t.id === editingId ? { ...t, ...form, assignedTo: form.assignedTo || null } : t),
+      form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
+      editingId: null,
+      showForm: false
+    })
   }
 
   const cancelEdit = () => {
-    setForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" })
-    setEditingId(null)
-    setShowForm(false)
+    updateState({
+      form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
+      editingId: null,
+      showForm: false
+    })
   }
 
   const projectOptions = [{ value: "", label: "Select project" }, ...mockProjects.map(p => ({ value: p.id, label: p.name }))]
@@ -88,7 +106,7 @@ export default function ManageTasks() {
       <PageHeader
         title="Tasks"
         subtitle={`${tasks.length} total tasks across all projects`}
-        action={<Btn onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" }) }}>
+        action={<Btn onClick={() => updateState({ showForm: !showForm, editingId: null, form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" } })}>
           {showForm ? "Cancel" : "+ New task"}
         </Btn>}
       />
@@ -97,17 +115,17 @@ export default function ManageTasks() {
         <Card style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Create task</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-            <Input label="Task title" placeholder="e.g. Redesign landing page" value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} />
-            <Select label="Project" value={form.projectId} onChange={e => setForm({ ...form, projectId: e.target.value })} options={projectOptions} />
-            <Select label="Assign to" value={form.assignedTo} onChange={e => setForm({ ...form, assignedTo: e.target.value })} options={memberOptions} />
-            <Select label="Priority" value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })} options={priorityOptions} />
-            <Input label="Deadline" type="text" placeholder="e.g. Apr 30, 2025" value={form.deadline} onChange={e => setForm({ ...form, deadline: e.target.value })} />
+            <Input label="Task title" placeholder="e.g. Redesign landing page" value={form.title} onChange={e => updateState({ form: { ...form, title: e.target.value } })} />
+            <Select label="Project" value={form.projectId} onChange={e => updateState({ form: { ...form, projectId: e.target.value } })} options={projectOptions} />
+            <Select label="Assign to" value={form.assignedTo} onChange={e => updateState({ form: { ...form, assignedTo: e.target.value } })} options={memberOptions} />
+            <Select label="Priority" value={form.priority} onChange={e => updateState({ form: { ...form, priority: e.target.value } })} options={priorityOptions} />
+            <Input label="Deadline" type="text" placeholder="e.g. Apr 30, 2025" value={form.deadline} onChange={e => updateState({ form: { ...form, deadline: e.target.value } })} />
             <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
               <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>Description</label>
               <textarea
                 placeholder="Task details..."
                 value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
+                onChange={e => updateState({ form: { ...form, description: e.target.value } })}
                 rows={2}
                 style={{
                   background: "var(--surface)", border: "1px solid rgba(153,151,124,0.2)",
@@ -128,7 +146,7 @@ export default function ManageTasks() {
         {filterTabs.map(tab => (
           <button
             key={tab.key}
-            onClick={() => setFilter(tab.key)}
+            onClick={() => updateState({ filter: tab.key })}
             style={{
               padding: "6px 14px", borderRadius: 99, fontSize: 12, cursor: "pointer",
               background: filter === tab.key ? "var(--accent)" : "var(--surface)",

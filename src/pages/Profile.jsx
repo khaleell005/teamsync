@@ -4,7 +4,14 @@ import { Card, Avatar, Badge, Btn, Input, PageHeader } from "../components/ui"
 import { mockMembers } from "../utils/mockData"
 
 export default function Profile() {
-  const [currentUser, setCurrentUser] = useState(null)
+  const [currentUser, setCurrentUser] = useState(() => {
+    try {
+      const stored = localStorage.getItem("teamsync_user")
+      return stored ? JSON.parse(stored) : null
+    } catch {
+      return null
+    }
+  })
   const [members, setMembers] = useState(mockMembers)
   const [editMode, setEditMode] = useState(false)
   const [form, setForm] = useState({ name: "", photo: null })

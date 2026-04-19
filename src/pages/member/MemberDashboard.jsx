@@ -1,29 +1,43 @@
+import { useState, useEffect } from "react"
 import Layout from "../../components/layout/Layout"
 import { StatCard, Card, StatusBadge, PriorityDot, Avatar, Badge, PageHeader, Divider } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const getStoredUser = () => {
-  try {
-    const stored = localStorage.getItem("teamsync_user")
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
 export default function MemberDashboard() {
-  const currentUser = getStoredUser()
+  const [currentUser, setCurrentUser] = useState(null)
+  const [myTasksData, setMyTasksData] = useState([])
+  const [loaded, setLoaded] = useState(false)
 
-  if (!currentUser) {
-    window.location.href = "/login"
-    return null
-  }
-  if (currentUser.role === "admin") {
-    window.location.href = "/admin/dashboard"
-    return null
-  }
+  useEffect(() => {
+    const stored = localStorage.getItem("teamsync_user")
+    if (!stored) {
+      window.location.href = "/login"
+      return
+    }
+    const user = JSON.parse(stored)
+    if (user.role === "admin") {
+      window.location.href = "/admin/dashboard"
+      return
+    }
+    setCurrentUser(user)
+    
+    if (user.role === "viewer") {
+      const viewerTasks = mockTasks.filter(t => {
+        const project = mockProjects.find(p => p.id === t.projectId)
+        return project && project.memberIds.includes(user.id)
+      })
+      setMyTasksData(viewerTasks)
+    } else {
+      setMyTasksData(mockTasks.filter(t => t.assignedTo === user.id))
+    }
+    setLoaded(true)
+  }, [])
 
-  const myTasks = mockTasks.filter(t => t.assignedTo === currentUser.id)
+  if (!loaded || !currentUser) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>
+
+  const isViewer = currentUser.role === "viewer"
+
+  let myTasks = myTasksData
   const myProjects = mockProjects.filter(p => p.memberIds.includes(currentUser.id))
 
   const inProgress = myTasks.filter(t => t.status === "in_progress")

@@ -1,58 +1,72 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Layout from "../../components/layout/Layout"
 import { Card, Avatar, Badge, Btn, Input, PageHeader, Divider, EmptyState } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const getStoredUser = () => {
-  try {
-    const stored = localStorage.getItem("teamsync_user")
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
 export default function ManageProjects() {
-  const currentUser = getStoredUser()
-  const [projects, setProjects] = useState(mockProjects)
+  const [state, setState] = useState({
+    user: null,
+    ready: false,
+    projects: mockProjects,
+    showForm: false,
+    form: { name: "", description: "", leadId: "", memberIds: [] }
+  })
 
-  if (!currentUser) {
-    window.location.href = "/login"
-    return null
-  }
-  if (currentUser.role !== "admin") {
-    window.location.href = "/dashboard"
-    return null
+  useEffect(() => {
+    const stored = localStorage.getItem("teamsync_user")
+    if (stored) {
+      const user = JSON.parse(stored)
+      if (user.role === "admin") {
+        setState(s => ({ ...s, user, ready: true }))
+      } else {
+        window.location.href = "/dashboard"
+      }
+    } else {
+      window.location.href = "/login"
+    }
+  }, [])
+
+  if (!state.ready || !state.user) {
+    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "var(--base)", color: "var(--text)" }}>Loading...</div>
   }
 
-  const adminUser = currentUser
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: "", description: "", leadId: "", memberIds: [] })
+  const adminUser = state.user
+  const projects = state.projects
+  const showForm = state.showForm
+  const form = state.form
+  const updateState = (updates) => setState(s => ({ ...s, ...updates }))
 
   const getUser = (id) => mockMembers.find(m => m.id === id)
   const getTaskCount = (pid) => mockTasks.filter(t => t.projectId === pid).length
 
   const toggleMember = (id) => {
-    setForm(f => ({
-      ...f,
-      memberIds: f.memberIds.includes(id) ? f.memberIds.filter(m => m !== id) : [...f.memberIds, id],
-    }))
+    updateState({
+      form: {
+        ...form,
+        memberIds: form.memberIds.includes(id) ? form.memberIds.filter(m => m !== id) : [...form.memberIds, id],
+      }
+    })
   }
 
   const handleAdd = () => {
     if (!form.name) return
-    setProjects(prev => [...prev, {
+    const newProject = {
       id: `p${Date.now()}`,
       ...form,
       status: "active",
       createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    }])
-    setForm({ name: "", description: "", leadId: "", memberIds: [] })
-    setShowForm(false)
+    }
+    updateState({
+      projects: [...state.projects, newProject],
+      form: { name: "", description: "", leadId: "", memberIds: [] },
+      showForm: false
+    })
   }
 
   const toggleStatus = (id) => {
-    setProjects(prev => prev.map(p => p.id === id ? { ...p, status: p.status === "active" ? "completed" : "active" } : p))
+    updateState({
+      projects: state.projects.map(p => p.id === id ? { ...p, status: p.status === "active" ? "completed" : "active" } : p)
+    })
   }
 
   return (
@@ -60,21 +74,21 @@ export default function ManageProjects() {
       <PageHeader
         title="Projects"
         subtitle={`${projects.filter(p => p.status === "active").length} active · ${projects.filter(p => p.status === "completed").length} completed`}
-        action={<Btn onClick={() => setShowForm(!showForm)}>{showForm ? "Cancel" : "+ New project"}</Btn>}
+        action={<Btn onClick={() => updateState({ showForm: !showForm })}>{showForm ? "Cancel" : "+ New project"}</Btn>}
       />
 
       {showForm && (
         <Card style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Create project</h3>
           <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Input label="Project name" placeholder="e.g. NexaFlow Rebrand" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
+            <Input label="Project name" placeholder="e.g. NexaFlow Rebrand" value={form.name} onChange={e => updateState({ form: { ...form, name: e.target.value } })} />
             <div>
               <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: 10 }}>Project Lead</label>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
                 {mockMembers.filter(m => m.role === "pm" || m.role === "member").map(m => (
                   <button
                     key={m.id}
-                    onClick={() => setForm({ ...form, leadId: m.id })}
+                    onClick={() => updateState({ form: { ...form, leadId: m.id } })}
                     style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "6px 12px",
                       borderRadius: 99, cursor: "pointer", transition: "all 0.15s",
@@ -94,7 +108,7 @@ export default function ManageProjects() {
               <textarea
                 placeholder="Brief description of this project..."
                 value={form.description}
-                onChange={e => setForm({ ...form, description: e.target.value })}
+                onChange={e => updateState({ form: { ...form, description: e.target.value } })}
                 rows={2}
                 style={{
                   background: "var(--surface)", border: "1px solid rgba(153,151,124,0.2)",

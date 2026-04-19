@@ -1,30 +1,36 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Layout from "../../components/layout/Layout"
 import { Card, Avatar, StatusBadge, PriorityDot, Badge, PageHeader } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const getStoredUser = () => {
-  try {
-    const stored = localStorage.getItem("teamsync_user")
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
 export default function TeamView() {
-  const currentUser = getStoredUser()
-  const myProjects = currentUser ? mockProjects.filter(p => p.memberIds.includes(currentUser.id)) : []
-  const [selectedProject, setSelectedProject] = useState(myProjects[0]?.id || "")
+  const [currentUser, setCurrentUser] = useState(null)
+  const [loaded, setLoaded] = useState(false)
+  const [selectedProject, setSelectedProject] = useState("")
 
-  if (!currentUser) {
-    window.location.href = "/login"
-    return null
-  }
-  if (currentUser.role === "admin") {
-    window.location.href = "/admin/dashboard"
-    return null
-  }
+  useEffect(() => {
+    const stored = localStorage.getItem("teamsync_user")
+    if (!stored) {
+      window.location.href = "/login"
+      return
+    }
+    const user = JSON.parse(stored)
+    if (user.role === "admin" || user.role === "viewer") {
+      window.location.href = user.role === "admin" ? "/admin/dashboard" : "/dashboard"
+      return
+    }
+    setCurrentUser(user)
+    
+    const userProjects = mockProjects.filter(p => p.memberIds.includes(user.id))
+    if (userProjects.length > 0) {
+      setSelectedProject(userProjects[0].id)
+    }
+    setLoaded(true)
+  }, [])
+
+  if (!loaded || !currentUser) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>
+
+  const myProjects = mockProjects.filter(p => p.memberIds.includes(currentUser.id))
 
   const project = mockProjects.find(p => p.id === selectedProject)
   const projectMembers = project ? project.memberIds.map(id => mockMembers.find(m => m.id === id)).filter(Boolean) : []

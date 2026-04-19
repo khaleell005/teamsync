@@ -15,6 +15,13 @@ const memberLinks = [
   { to: "/profile", label: "Profile", icon: "◯" },
 ]
 
+const viewerLinks = [
+  { to: "/dashboard", label: "Dashboard", icon: "▦" },
+  { to: "/my-tasks", label: "Project Tasks", icon: "◎" },
+  { to: "/team-view", label: "Team View", icon: "◈" },
+  { to: "/profile", label: "Profile", icon: "◯" },
+]
+
 const styles = {
   sidebar: {
     width: 220,
@@ -109,7 +116,14 @@ const linkStyle = (isActive) => ({
 })
 
 export default function Sidebar({ role = "admin", user = { name: "Khaleel A", role: "admin", color: "#99977C" } }) {
-  const links = role === "admin" ? adminLinks : memberLinks
+  let links
+  if (role === "admin") {
+    links = adminLinks
+  } else if (role === "viewer") {
+    links = viewerLinks
+  } else {
+    links = memberLinks
+  }
   const navigate = useNavigate()
 
   const handleLogout = () => {
@@ -125,7 +139,7 @@ export default function Sidebar({ role = "admin", user = { name: "Khaleel A", ro
       </div>
 
       <nav style={styles.nav}>
-        <div style={styles.sectionLabel}>{role === "admin" ? "Admin" : "Menu"}</div>
+        <div style={styles.sectionLabel}>{role === "admin" ? "Admin" : role === "viewer" ? "Viewer" : "Menu"}</div>
         {links.map((link) => (
           <NavLink
             key={link.to}

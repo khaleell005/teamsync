@@ -1,35 +1,54 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Layout from "../../components/layout/Layout"
 import { Card, Avatar, Badge, Btn, Input, Select, PageHeader, Divider } from "../../components/ui"
 import { mockMembers } from "../../utils/mockData"
 
 const defaultColors = ["#7EB8C9", "#C97E8A", "#85C98A", "#C9A84C", "#A07EC9", "#C9907E", "#7EC9B8"]
 
-const getStoredUser = () => {
-  try {
-    const stored = localStorage.getItem("teamsync_user")
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
 export default function ManageMembers() {
-  const [currentUser, setCurrentUser] = useState(getStoredUser)
-  const [members, setMembers] = useState(mockMembers)
+  const [state, setState] = useState({
+    user: null,
+    ready: false,
+    members: mockMembers,
+    showForm: false,
+    form: { name: "", email: "", password: "", role: "member", color: defaultColors[0] }
+  })
 
-  if (!currentUser) {
-    window.location.href = "/login"
-    return null
-  }
-  if (currentUser.role !== "admin") {
-    window.location.href = "/dashboard"
-    return null
+  useEffect(() => {
+    const stored = localStorage.getItem("teamsync_user")
+    if (stored) {
+      const user = JSON.parse(stored)
+      if (user.role === "admin") {
+        setState(s => ({ ...s, user, ready: true }))
+      } else {
+        window.location.href = "/dashboard"
+      }
+    } else {
+      window.location.href = "/login"
+    }
+  }, [])
+
+  if (!state.ready || !state.user) {
+    return (
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        height: "100vh",
+        background: "var(--base)",
+        color: "var(--text)"
+      }}>
+        Loading...
+      </div>
+    )
   }
 
-  const adminUser = currentUser
-  const [showForm, setShowForm] = useState(false)
-  const [form, setForm] = useState({ name: "", email: "", password: "", role: "member", color: defaultColors[0] })
+  const adminUser = state.user
+  const members = state.members
+  const showForm = state.showForm
+  const form = state.form
+
+  const updateState = (updates) => setState(s => ({ ...s, ...updates }))
 
   const handleAdd = () => {
     if (!form.name || !form.email) return
@@ -38,32 +57,34 @@ export default function ManageMembers() {
       ...form,
       createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
     }
-    setMembers(prev => [...prev, newMember])
-    setForm({ name: "", email: "", password: "", role: "member", color: defaultColors[0] })
-    setShowForm(false)
+    updateState({ 
+      members: [...state.members, newMember],
+      form: { name: "", email: "", password: "", role: "member", color: defaultColors[0] },
+      showForm: false
+    })
   }
 
-  const handleDelete = (id) => setMembers(prev => prev.filter(m => m.id !== id))
+  const handleDelete = (id) => updateState({ members: state.members.filter(m => m.id !== id) })
 
   return (
     <Layout role="admin" user={{ name: adminUser.name, role: adminUser.role, color: adminUser.color }}>
       <PageHeader
         title="Members"
         subtitle={`${members.length} team members in your workspace`}
-        action={<Btn onClick={() => setShowForm(!showForm)}>{showForm ? "Cancel" : "+ Add member"}</Btn>}
+        action={<Btn onClick={() => updateState({ showForm: !showForm })}>{showForm ? "Cancel" : "+ Add member"}</Btn>}
       />
 
       {showForm && (
         <Card style={{ marginBottom: 24 }}>
           <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Create member account</h3>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-            <Input label="Full name" placeholder="Tunde Musa" value={form.name} onChange={e => setForm({ ...form, name: e.target.value })} />
-            <Input label="Email address" type="email" placeholder="tunde@teamsync.io" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
-            <Input label="Temporary password" type="password" placeholder="••••••••" value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} />
+            <Input label="Full name" placeholder="Tunde Musa" value={form.name} onChange={e => updateState({ form: { ...form, name: e.target.value } })} />
+            <Input label="Email address" type="email" placeholder="tunde@teamsync.io" value={form.email} onChange={e => updateState({ form: { ...form, email: e.target.value } })} />
+            <Input label="Temporary password" type="password" placeholder="••••••••" value={form.password} onChange={e => updateState({ form: { ...form, password: e.target.value } })} />
             <Select
               label="Role"
               value={form.role}
-              onChange={e => setForm({ ...form, role: e.target.value })}
+              onChange={e => updateState({ form: { ...form, role: e.target.value } })}
               options={[
                 { value: "member", label: "Member" },
                 { value: "pm", label: "Project Lead" },
@@ -78,7 +99,7 @@ export default function ManageMembers() {
                 {defaultColors.map(c => (
                   <button
                     key={c}
-                    onClick={() => setForm({ ...form, color: c })}
+                    onClick={() => updateState({ form: { ...form, color: c } })}
                     style={{
                       width: 28, height: 28, borderRadius: "50%", background: c,
                       border: form.color === c ? "3px solid var(--text)" : "3px solid transparent",
@@ -91,7 +112,7 @@ export default function ManageMembers() {
                 <input
                   type="color"
                   value={form.color}
-                  onChange={e => setForm({ ...form, color: e.target.value })}
+                  onChange={e => updateState({ form: { ...form, color: e.target.value } })}
                   style={{ width: 28, height: 28, border: "none", cursor: "pointer", borderRadius: 4 }}
                 />
                 Custom

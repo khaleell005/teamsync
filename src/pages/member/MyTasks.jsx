@@ -1,29 +1,44 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Layout from "../../components/layout/Layout"
 import { Card, StatusBadge, PriorityDot, Btn, Select, PageHeader, Divider, EmptyState } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const getStoredUser = () => {
-  try {
-    const stored = localStorage.getItem("teamsync_user")
-    return stored ? JSON.parse(stored) : null
-  } catch {
-    return null
-  }
-}
-
 export default function MyTasks() {
-  const currentUser = getStoredUser()
-  const [tasks, setTasks] = useState(currentUser ? mockTasks.filter(t => t.assignedTo === currentUser.id) : [])
+  const [currentUser, setCurrentUser] = useState(null)
+  const [tasks, setTasks] = useState([])
+  const [loaded, setLoaded] = useState(false)
+  const [editingId, setEditingId] = useState(null)
+  const [noteInput, setNoteInput] = useState("")
+  const [statusInput, setStatusInput] = useState("")
 
-  if (!currentUser) {
-    window.location.href = "/login"
-    return null
-  }
-  if (currentUser.role === "admin") {
-    window.location.href = "/admin/dashboard"
-    return null
-  }
+  useEffect(() => {
+    const stored = localStorage.getItem("teamsync_user")
+    if (!stored) {
+      window.location.href = "/login"
+      return
+    }
+    const user = JSON.parse(stored)
+    if (user.role === "admin") {
+      window.location.href = "/admin/dashboard"
+      return
+    }
+    setCurrentUser(user)
+    
+    if (user.role === "viewer") {
+      const viewerTasks = mockTasks.filter(t => {
+        const project = mockProjects.find(p => p.id === t.projectId)
+        return project && project.memberIds.includes(user.id)
+      })
+      setTasks(viewerTasks)
+    } else {
+      setTasks(mockTasks.filter(t => t.assignedTo === user.id))
+    }
+    setLoaded(true)
+  }, [])
+
+  if (!loaded || !currentUser) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>
+
+  const isViewer = currentUser.role === "viewer"
 
   const getProject = (id) => mockProjects.find(p => p.id === id)
 
@@ -50,8 +65,8 @@ export default function MyTasks() {
   return (
     <Layout role="member" user={{ name: currentUser.name, role: currentUser.role, color: currentUser.color }}>
       <PageHeader
-        title="My Tasks"
-        subtitle={`${tasks.length} tasks assigned to you`}
+        title={isViewer ? "Project Tasks" : "My Tasks"}
+        subtitle={isViewer ? `${tasks.length} tasks in your projects` : `${tasks.length} tasks assigned to you`}
       />
 
       <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -128,7 +143,7 @@ export default function MyTasks() {
                     <Btn variant="ghost" onClick={() => setEditingId(null)}>Cancel</Btn>
                   </div>
                 </div>
-              ) : (
+              ) : !isViewer && (
                 <Btn variant="ghost" size="sm" onClick={() => openEdit(task)}>Update progress</Btn>
               )}
             </Card>
