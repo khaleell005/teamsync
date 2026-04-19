@@ -3,10 +3,29 @@ import Layout from "../../components/layout/Layout"
 import { Card, Avatar, Badge, Btn, Input, PageHeader, Divider, EmptyState } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const adminUser = mockMembers[0]
+const getStoredUser = () => {
+  try {
+    const stored = localStorage.getItem("teamsync_user")
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
 
 export default function ManageProjects() {
+  const currentUser = getStoredUser()
   const [projects, setProjects] = useState(mockProjects)
+
+  if (!currentUser) {
+    window.location.href = "/login"
+    return null
+  }
+  if (currentUser.role !== "admin") {
+    window.location.href = "/dashboard"
+    return null
+  }
+
+  const adminUser = currentUser
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: "", description: "", leadId: "", memberIds: [] })
 

@@ -2,9 +2,27 @@ import Layout from "../../components/layout/Layout"
 import { StatCard, Card, StatusBadge, PriorityDot, Avatar, Badge, PageHeader, Divider } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const currentUser = mockMembers[1] // Tunde — member
+const getStoredUser = () => {
+  try {
+    const stored = localStorage.getItem("teamsync_user")
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
 
 export default function MemberDashboard() {
+  const currentUser = getStoredUser()
+
+  if (!currentUser) {
+    window.location.href = "/login"
+    return null
+  }
+  if (currentUser.role === "admin") {
+    window.location.href = "/admin/dashboard"
+    return null
+  }
+
   const myTasks = mockTasks.filter(t => t.assignedTo === currentUser.id)
   const myProjects = mockProjects.filter(p => p.memberIds.includes(currentUser.id))
 

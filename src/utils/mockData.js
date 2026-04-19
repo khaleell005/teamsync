@@ -1,9 +1,9 @@
 export const mockMembers = [
-  { id: "u1", name: "Khaleel ", email: "khaleel@teamsync.io", role: "admin", color: "#99977C", createdAt: "Apr 1, 2025" },
-  { id: "u2", name: "Tunde Musa", email: "tunde@teamsync.io", role: "pm", color: "#7EB8C9", createdAt: "Apr 3, 2025" },
-  { id: "u3", name: "Aisha Okonkwo", email: "aisha@teamsync.io", role: "member", color: "#C97E8A", createdAt: "Apr 3, 2025" },
-  { id: "u4", name: "Rasheed Bello", email: "rasheed@teamsync.io", role: "member", color: "#85C98A", createdAt: "Apr 5, 2025" },
-  { id: "u5", name: "Ngozi Eze", email: "ngozi@teamsync.io", role: "viewer", color: "#C9A84C", createdAt: "Apr 6, 2025" },
+  { id: "u1", name: "Khaleel", email: "khaleel@teamsync.io", password: "admin123", role: "admin", color: "#99977C", photo: null, createdAt: "Apr 1, 2025" },
+  { id: "u2", name: "Tunde Musa", email: "tunde@teamsync.io", password: "pm123", role: "pm", color: "#7EB8C9", photo: null, createdAt: "Apr 3, 2025" },
+  { id: "u3", name: "Aisha Okonkwo", email: "aisha@teamsync.io", password: "member123", role: "member", color: "#C97E8A", photo: null, createdAt: "Apr 3, 2025" },
+  { id: "u4", name: "Rasheed Bello", email: "rasheed@teamsync.io", password: "member123", role: "member", color: "#85C98A", photo: null, createdAt: "Apr 5, 2025" },
+  { id: "u5", name: "Ngozi Eze", email: "ngozi@teamsync.io", password: "viewer123", role: "viewer", color: "#C9A84C", photo: null, createdAt: "Apr 6, 2025" },
 ]
 
 export const mockProjects = [

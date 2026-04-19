@@ -1,16 +1,18 @@
-import { NavLink } from "react-router-dom"
+import { NavLink, useNavigate } from "react-router-dom"
 
 const adminLinks = [
   { to: "/admin/dashboard", label: "Overview", icon: "▦" },
   { to: "/admin/members", label: "Members", icon: "◈" },
   { to: "/admin/projects", label: "Projects", icon: "◉" },
   { to: "/admin/tasks", label: "Tasks", icon: "◎" },
+  { to: "/profile", label: "Profile", icon: "◯" },
 ]
 
 const memberLinks = [
   { to: "/dashboard", label: "Dashboard", icon: "▦" },
   { to: "/my-tasks", label: "My Tasks", icon: "◎" },
   { to: "/team-view", label: "Team View", icon: "◈" },
+  { to: "/profile", label: "Profile", icon: "◯" },
 ]
 
 const styles = {
@@ -108,6 +110,12 @@ const linkStyle = (isActive) => ({
 
 export default function Sidebar({ role = "admin", user = { name: "Khaleel A", role: "admin", color: "#99977C" } }) {
   const links = role === "admin" ? adminLinks : memberLinks
+  const navigate = useNavigate()
+
+  const handleLogout = () => {
+    localStorage.removeItem("teamsync_user")
+    navigate("/login")
+  }
 
   return (
     <aside style={styles.sidebar}>
@@ -140,6 +148,15 @@ export default function Sidebar({ role = "admin", user = { name: "Khaleel A", ro
             <div style={styles.userRole}>{user.role}</div>
           </div>
         </div>
+        <button
+          onClick={handleLogout}
+          style={{
+            marginTop: 12, fontSize: 11, color: "var(--muted)", cursor: "pointer",
+            background: "none", border: "none", padding: 0, textDecoration: "underline",
+          }}
+        >
+          Sign out
+        </button>
       </div>
     </aside>
   )

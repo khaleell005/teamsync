@@ -3,12 +3,32 @@ import Layout from "../../components/layout/Layout"
 import { Card, Avatar, Badge, StatusBadge, PriorityDot, Btn, Input, Select, PageHeader, Divider, EmptyState } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const adminUser = mockMembers[0]
+const getStoredUser = () => {
+  try {
+    const stored = localStorage.getItem("teamsync_user")
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
 
 export default function ManageTasks() {
+  const currentUser = getStoredUser()
   const [tasks, setTasks] = useState(mockTasks)
+
+  if (!currentUser) {
+    window.location.href = "/login"
+    return null
+  }
+  if (currentUser.role !== "admin") {
+    window.location.href = "/dashboard"
+    return null
+  }
+
+  const adminUser = currentUser
   const [showForm, setShowForm] = useState(false)
   const [filter, setFilter] = useState("all")
+  const [editingId, setEditingId] = useState(null)
   const [form, setForm] = useState({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" })
 
   const getUser = (id) => mockMembers.find(m => m.id === id)
@@ -17,10 +37,11 @@ export default function ManageTasks() {
   const filtered = filter === "all" ? tasks : tasks.filter(t => t.status === filter)
 
   const handleAdd = () => {
-    if (!form.title || !form.projectId || !form.assignedTo) return
+    if (!form.title || !form.projectId) return
     setTasks(prev => [...prev, {
       id: `t${Date.now()}`,
       ...form,
+      assignedTo: form.assignedTo || null,
       status: "not_started",
       progressNote: "",
       createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
@@ -31,8 +52,28 @@ export default function ManageTasks() {
 
   const handleDelete = (id) => setTasks(prev => prev.filter(t => t.id !== id))
 
+  const handleEdit = (task) => {
+    setForm({ title: task.title, description: task.description || "", projectId: task.projectId, assignedTo: task.assignedTo || "", priority: task.priority, deadline: task.deadline || "" })
+    setEditingId(task.id)
+    setShowForm(true)
+  }
+
+  const handleUpdate = () => {
+    if (!form.title || !form.projectId) return
+    setTasks(prev => prev.map(t => t.id === editingId ? { ...t, ...form, assignedTo: form.assignedTo || null } : t))
+    setForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" })
+    setEditingId(null)
+    setShowForm(false)
+  }
+
+  const cancelEdit = () => {
+    setForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" })
+    setEditingId(null)
+    setShowForm(false)
+  }
+
   const projectOptions = [{ value: "", label: "Select project" }, ...mockProjects.map(p => ({ value: p.id, label: p.name }))]
-  const memberOptions = [{ value: "", label: "Select member" }, ...mockMembers.filter(m => m.role !== "admin").map(m => ({ value: m.id, label: m.name }))]
+  const memberOptions = [{ value: "", label: "Unassigned" }, ...mockMembers.filter(m => m.role !== "admin").map(m => ({ value: m.id, label: m.name }))]
   const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }]
 
   const filterTabs = [
@@ -47,7 +88,9 @@ export default function ManageTasks() {
       <PageHeader
         title="Tasks"
         subtitle={`${tasks.length} total tasks across all projects`}
-        action={<Btn onClick={() => setShowForm(!showForm)}>{showForm ? "Cancel" : "+ New task"}</Btn>}
+        action={<Btn onClick={() => { setShowForm(!showForm); setEditingId(null); setForm({ title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" }) }}>
+          {showForm ? "Cancel" : "+ New task"}
+        </Btn>}
       />
 
       {showForm && (
@@ -74,7 +117,10 @@ export default function ManageTasks() {
               />
             </div>
           </div>
-          <Btn onClick={handleAdd}>Create task</Btn>
+          <div style={{ display: "flex", gap: 8 }}>
+            <Btn onClick={editingId ? handleUpdate : handleAdd}>{editingId ? "Update task" : "Create task"}</Btn>
+            {editingId && <Btn variant="ghost" onClick={cancelEdit}>Cancel</Btn>}
+          </div>
         </Card>
       )}
 
@@ -98,7 +144,7 @@ export default function ManageTasks() {
 
       <Card>
         <div style={{
-          display: "grid", gridTemplateColumns: "2.5fr 1.5fr 1fr 1fr 1fr 90px",
+          display: "grid", gridTemplateColumns: "2.5fr 1.5fr 1fr 1fr 1fr 120px",
           padding: "8px 12px", marginBottom: 4,
         }}>
           {["Task", "Project", "Assignee", "Priority", "Status", ""].map((h, i) => (
@@ -114,7 +160,7 @@ export default function ManageTasks() {
           const project = getProject(task.projectId)
           return (
             <div key={task.id} style={{
-              display: "grid", gridTemplateColumns: "2.5fr 1.5fr 1fr 1fr 1fr 90px",
+              display: "grid", gridTemplateColumns: "2.5fr 1.5fr 1fr 1fr 1fr 120px",
               alignItems: "center", padding: "12px 12px",
               borderRadius: "var(--radius-md)", transition: "background 0.15s",
             }}
@@ -127,14 +173,15 @@ export default function ManageTasks() {
               </div>
               <p style={{ fontSize: 12, color: "var(--muted)" }}>{project?.name || "—"}</p>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {assignee && <><Avatar name={assignee.name} color={assignee.color} size={22} /><span style={{ fontSize: 12, color: "var(--muted)" }}>{assignee.name.split(" ")[0]}</span></>}
+                {assignee ? <><Avatar name={assignee.name} color={assignee.color} size={22} /><span style={{ fontSize: 12, color: "var(--muted)" }}>{assignee.name.split(" ")[0]}</span></> : <span style={{ fontSize: 11, color: "var(--faint)" }}>Unassigned</span>}
               </div>
               <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
                 <PriorityDot priority={task.priority} />
                 <span style={{ fontSize: 12, color: "var(--muted)", textTransform: "capitalize" }}>{task.priority}</span>
               </div>
               <StatusBadge status={task.status} />
-              <div style={{ display: "flex", justifyContent: "flex-end" }}>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
+                <Btn variant="ghost" size="sm" onClick={() => handleEdit(task)}>Edit</Btn>
                 <Btn variant="danger" size="sm" onClick={() => handleDelete(task.id)}>Delete</Btn>
               </div>
             </div>

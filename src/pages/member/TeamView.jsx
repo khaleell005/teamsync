@@ -3,11 +3,28 @@ import Layout from "../../components/layout/Layout"
 import { Card, Avatar, StatusBadge, PriorityDot, Badge, PageHeader } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const currentUser = mockMembers[1]
-const myProjects = mockProjects.filter(p => p.memberIds.includes(currentUser.id))
+const getStoredUser = () => {
+  try {
+    const stored = localStorage.getItem("teamsync_user")
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
 
 export default function TeamView() {
+  const currentUser = getStoredUser()
+  const myProjects = currentUser ? mockProjects.filter(p => p.memberIds.includes(currentUser.id)) : []
   const [selectedProject, setSelectedProject] = useState(myProjects[0]?.id || "")
+
+  if (!currentUser) {
+    window.location.href = "/login"
+    return null
+  }
+  if (currentUser.role === "admin") {
+    window.location.href = "/admin/dashboard"
+    return null
+  }
 
   const project = mockProjects.find(p => p.id === selectedProject)
   const projectMembers = project ? project.memberIds.map(id => mockMembers.find(m => m.id === id)).filter(Boolean) : []

@@ -3,13 +3,27 @@ import Layout from "../../components/layout/Layout"
 import { Card, StatusBadge, PriorityDot, Btn, Select, PageHeader, Divider, EmptyState } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const currentUser = mockMembers[1]
+const getStoredUser = () => {
+  try {
+    const stored = localStorage.getItem("teamsync_user")
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
 
 export default function MyTasks() {
-  const [tasks, setTasks] = useState(mockTasks.filter(t => t.assignedTo === currentUser.id))
-  const [editingId, setEditingId] = useState(null)
-  const [noteInput, setNoteInput] = useState("")
-  const [statusInput, setStatusInput] = useState("")
+  const currentUser = getStoredUser()
+  const [tasks, setTasks] = useState(currentUser ? mockTasks.filter(t => t.assignedTo === currentUser.id) : [])
+
+  if (!currentUser) {
+    window.location.href = "/login"
+    return null
+  }
+  if (currentUser.role === "admin") {
+    window.location.href = "/admin/dashboard"
+    return null
+  }
 
   const getProject = (id) => mockProjects.find(p => p.id === id)
 

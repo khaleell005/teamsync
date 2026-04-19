@@ -1,9 +1,31 @@
 import { useState } from "react"
+import { useNavigate } from "react-router-dom"
 import { Input, Btn } from "../components/ui"
+import { mockMembers } from "../utils/mockData"
 
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const navigate = useNavigate()
+
+  const handleLogin = () => {
+    if (!email || !password) {
+      setError("Please enter email and password")
+      return
+    }
+    const user = mockMembers.find(m => m.email.toLowerCase() === email.toLowerCase() && m.password === password)
+    if (user) {
+      localStorage.setItem("teamsync_user", JSON.stringify(user))
+      if (user.role === "admin") {
+        navigate("/admin/dashboard")
+      } else {
+        navigate("/dashboard")
+      }
+    } else {
+      setError("Invalid email or password")
+    }
+  }
 
   return (
     <div style={{
@@ -55,8 +77,10 @@ export default function Login() {
               onChange={e => setPassword(e.target.value)}
             />
 
+            {error && <p style={{ fontSize: 12, color: "#C9714C" }}>{error}</p>}
+
             <div style={{ marginTop: 4 }}>
-              <Btn style={{ width: "100%", justifyContent: "center" }}>
+              <Btn style={{ width: "100%", justifyContent: "center" }} onClick={handleLogin}>
                 Sign in
               </Btn>
             </div>

@@ -3,12 +3,31 @@ import Layout from "../../components/layout/Layout"
 import { Card, Avatar, Badge, Btn, Input, Select, PageHeader, Divider } from "../../components/ui"
 import { mockMembers } from "../../utils/mockData"
 
-const adminUser = mockMembers[0]
-
 const defaultColors = ["#7EB8C9", "#C97E8A", "#85C98A", "#C9A84C", "#A07EC9", "#C9907E", "#7EC9B8"]
 
+const getStoredUser = () => {
+  try {
+    const stored = localStorage.getItem("teamsync_user")
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
+
 export default function ManageMembers() {
+  const [currentUser, setCurrentUser] = useState(getStoredUser)
   const [members, setMembers] = useState(mockMembers)
+
+  if (!currentUser) {
+    window.location.href = "/login"
+    return null
+  }
+  if (currentUser.role !== "admin") {
+    window.location.href = "/dashboard"
+    return null
+  }
+
+  const adminUser = currentUser
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ name: "", email: "", password: "", role: "member", color: defaultColors[0] })
 

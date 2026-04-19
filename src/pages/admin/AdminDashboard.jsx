@@ -2,9 +2,28 @@ import Layout from "../../components/layout/Layout"
 import { StatCard, Card, Badge, StatusBadge, PriorityDot, Avatar, PageHeader, Btn } from "../../components/ui"
 import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
 
-const adminUser = mockMembers[0]
+const getStoredUser = () => {
+  try {
+    const stored = localStorage.getItem("teamsync_user")
+    return stored ? JSON.parse(stored) : null
+  } catch {
+    return null
+  }
+}
 
 export default function AdminDashboard() {
+  const currentUser = getStoredUser()
+
+  if (!currentUser) {
+    window.location.href = "/login"
+    return null
+  }
+  if (currentUser.role !== "admin") {
+    window.location.href = "/dashboard"
+    return null
+  }
+
+  const adminUser = currentUser
   const activeTasks = mockTasks.filter(t => t.status !== "completed")
   const completedTasks = mockTasks.filter(t => t.status === "completed")
   const activeProjects = mockProjects.filter(p => p.status === "active")
