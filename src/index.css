@@ -1,33 +1,75 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Inter:wght@300;400;500&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700&family=Inter:wght@300;400;500;600&display=swap");
+@import "tailwindcss";
 
-:root {
-  --base: #2e2820;
-  --surface: #3a342c;
-  --card: #5C5346;
-  --accent: #99977C;
-  --gold: #C9A84C;
-  --text: #F0ECE6;
-  --muted: #a89f94;
-  --faint: #6e6558;
-  --radius-sm: 6px;
-  --radius-md: 8px;
-  --radius-lg: 12px;
-  --radius-xl: 16px;
+@theme {
+  --font-sans: "Inter", sans-serif;
+  --font-display: "Syne", sans-serif;
+
+  --color-canvas: #241f18;
+  --color-canvas-deep: #17130f;
+  --color-surface: #342d25;
+  --color-surface-strong: #40372e;
+  --color-panel: #4b4338;
+  --color-accent: #b8b08f;
+  --color-accent-strong: #d4ca9d;
+  --color-gold: #d6ae47;
+  --color-copy: #f5f0e8;
+  --color-muted: #b6ab9d;
+  --color-faint: #74695d;
+  --color-line: #5b5143;
+
+  --shadow-soft: 0 18px 40px rgba(10, 8, 6, 0.18);
+  --shadow-panel: 0 24px 60px rgba(10, 8, 6, 0.22);
 }
 
-* { margin: 0; padding: 0; box-sizing: border-box; }
+@layer base {
+  html {
+    min-height: 100%;
+    background:
+      radial-gradient(circle at top left, rgba(201, 168, 76, 0.12), transparent 24%),
+      radial-gradient(circle at top right, rgba(184, 176, 143, 0.12), transparent 18%),
+      linear-gradient(180deg, #2c251d 0%, #241f18 36%, #17130f 100%);
+  }
 
-body {
-  background: var(--base);
-  color: var(--text);
-  font-family: 'Inter', sans-serif;
-  min-height: 100vh;
+  body {
+    min-height: 100vh;
+    background: transparent;
+    color: var(--color-copy);
+    font-family: var(--font-sans);
+    line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+  }
+
+  #root {
+    min-height: 100vh;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-display);
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(184, 176, 143, 0.28);
+    border-radius: 999px;
+  }
 }
-
-h1, h2, h3, h4 {
-  font-family: 'Syne', sans-serif;
-}
-
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--surface); }
-::-webkit-scrollbar-thumb { background: var(--faint); border-radius: 4px; }

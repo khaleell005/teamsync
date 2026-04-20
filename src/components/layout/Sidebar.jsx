@@ -1,4 +1,8 @@
 import { NavLink, useNavigate } from "react-router-dom"
+import { signOut } from "firebase/auth"
+import { auth } from "../../firebase/firebase"
+import { clearStoredUser } from "../../lib/session"
+import { cn } from "../../lib/cn"
 
 const adminLinks = [
   { to: "/admin/dashboard", label: "Overview", icon: "▦" },
@@ -22,99 +26,6 @@ const viewerLinks = [
   { to: "/profile", label: "Profile", icon: "◯" },
 ]
 
-const styles = {
-  sidebar: {
-    width: 220,
-    minHeight: "100vh",
-    background: "var(--surface)",
-    borderRight: "1px solid rgba(153,151,124,0.15)",
-    display: "flex",
-    flexDirection: "column",
-    padding: "0",
-    flexShrink: 0,
-  },
-  logo: {
-    padding: "28px 24px 24px",
-    borderBottom: "1px solid rgba(153,151,124,0.12)",
-  },
-  logoText: {
-    fontFamily: "'Syne', sans-serif",
-    fontSize: 20,
-    fontWeight: 700,
-    color: "var(--text)",
-    letterSpacing: "-0.02em",
-  },
-  logoSub: {
-    fontSize: 10,
-    color: "var(--accent)",
-    letterSpacing: "0.12em",
-    marginTop: 2,
-    textTransform: "uppercase",
-  },
-  nav: {
-    flex: 1,
-    padding: "20px 12px",
-    display: "flex",
-    flexDirection: "column",
-    gap: 2,
-  },
-  sectionLabel: {
-    fontSize: 9,
-    color: "var(--faint)",
-    letterSpacing: "0.14em",
-    textTransform: "uppercase",
-    padding: "8px 12px 6px",
-    fontFamily: "'Syne', sans-serif",
-  },
-  footer: {
-    padding: "16px 20px",
-    borderTop: "1px solid rgba(153,151,124,0.12)",
-  },
-  userRow: {
-    display: "flex",
-    alignItems: "center",
-    gap: 10,
-  },
-  avatar: {
-    width: 32,
-    height: 32,
-    borderRadius: "50%",
-    background: "var(--accent)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    fontSize: 11,
-    fontWeight: 600,
-    color: "#1e1d16",
-    flexShrink: 0,
-  },
-  userName: {
-    fontSize: 13,
-    fontWeight: 500,
-    color: "var(--text)",
-  },
-  userRole: {
-    fontSize: 10,
-    color: "var(--muted)",
-    textTransform: "capitalize",
-  },
-}
-
-const linkStyle = (isActive) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: 10,
-  padding: "9px 12px",
-  borderRadius: "var(--radius-md)",
-  fontSize: 13,
-  fontWeight: isActive ? 500 : 400,
-  color: isActive ? "var(--text)" : "var(--muted)",
-  background: isActive ? "rgba(153,151,124,0.15)" : "transparent",
-  textDecoration: "none",
-  transition: "all 0.15s",
-  borderLeft: isActive ? "2px solid var(--accent)" : "2px solid transparent",
-})
-
 export default function Sidebar({ role = "admin", user = { name: "Khaleel A", role: "admin", color: "#99977C" } }) {
   let links
   if (role === "admin") {
@@ -125,49 +36,60 @@ export default function Sidebar({ role = "admin", user = { name: "Khaleel A", ro
     links = memberLinks
   }
   const navigate = useNavigate()
+  const initials = user.name.split(" ").map((part) => part[0]).join("").slice(0, 2)
 
-  const handleLogout = () => {
-    localStorage.removeItem("teamsync_user")
+  const handleLogout = async () => {
+    await signOut(auth)
+    clearStoredUser()
     navigate("/login")
   }
 
   return (
-    <aside style={styles.sidebar}>
-      <div style={styles.logo}>
-        <div style={styles.logoText}>TeamSync</div>
-        <div style={styles.logoSub}>Workspace</div>
+    <aside className="border-line/70 bg-[linear-gradient(180deg,rgba(58,50,41,0.96)_0%,rgba(42,36,30,0.96)_100%)] backdrop-blur-xl lg:min-h-screen lg:w-64 lg:shrink-0 lg:border-r border-b">
+      <div className="border-line/70 border-b px-6 py-7">
+        <div className="font-display text-[22px] font-bold tracking-[-0.02em] text-copy">TeamSync</div>
+        <div className="mt-1 text-[10px] uppercase tracking-[0.16em] text-accent-strong">Workspace</div>
       </div>
 
-      <nav style={styles.nav}>
-        <div style={styles.sectionLabel}>{role === "admin" ? "Admin" : role === "viewer" ? "Viewer" : "Menu"}</div>
+      <nav className="flex flex-1 flex-col gap-1 px-3 py-5">
+        <div className="px-3 pb-2 font-display text-[9px] uppercase tracking-[0.14em] text-faint">
+          {role === "admin" ? "Admin" : role === "viewer" ? "Viewer" : "Menu"}
+        </div>
         {links.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
-            style={({ isActive }) => linkStyle(isActive)}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm transition",
+                isActive
+                  ? "border-accent/30 bg-[linear-gradient(90deg,rgba(184,176,143,0.18),rgba(184,176,143,0.07))] text-copy shadow-[inset_3px_0_0_var(--color-accent)]"
+                  : "border-transparent text-muted hover:border-line/70 hover:bg-white/[0.03] hover:text-copy",
+              )
+            }
           >
-            <span style={{ fontSize: 14 }}>{link.icon}</span>
+            <span className="text-sm">{link.icon}</span>
             {link.label}
           </NavLink>
         ))}
       </nav>
 
-      <div style={styles.footer}>
-        <div style={styles.userRow}>
-          <div style={{ ...styles.avatar, background: user.color }}>
-            {user.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
+      <div className="border-line/70 border-t bg-black/10 px-5 py-5">
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold text-canvas"
+            style={{ backgroundColor: user.color }}
+          >
+            {initials}
           </div>
           <div>
-            <div style={styles.userName}>{user.name}</div>
-            <div style={styles.userRole}>{user.role}</div>
+            <div className="text-sm font-medium text-copy">{user.name}</div>
+            <div className="text-[10px] capitalize text-muted">{user.role}</div>
           </div>
         </div>
         <button
           onClick={handleLogout}
-          style={{
-            marginTop: 12, fontSize: 11, color: "var(--muted)", cursor: "pointer",
-            background: "none", border: "none", padding: 0, textDecoration: "underline",
-          }}
+          className="mt-4 inline-flex h-9 items-center justify-center rounded-full border border-line/80 px-3.5 text-[11px] font-medium text-muted transition hover:border-accent/40 hover:text-copy"
         >
           Sign out
         </button>

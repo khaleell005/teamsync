@@ -1,25 +1,26 @@
+import { cn } from "../../lib/cn"
+
 // Badge
-export function Badge({ label, color = "accent" }) {
+export function Badge({ label, color = "accent", className }) {
   const colors = {
-    accent: { bg: "rgba(153,151,124,0.15)", text: "#99977C", border: "rgba(153,151,124,0.3)" },
-    gold: { bg: "rgba(201,168,76,0.15)", text: "#C9A84C", border: "rgba(201,168,76,0.3)" },
-    blue: { bg: "rgba(100,140,200,0.15)", text: "#5C8CC8", border: "rgba(100,140,200,0.3)" },
-    muted: { bg: "rgba(168,159,148,0.12)", text: "#a89f94", border: "rgba(168,159,148,0.2)" },
-    danger: { bg: "rgba(201,100,76,0.15)", text: "#C9714C", border: "rgba(201,100,76,0.3)" },
-    success: { bg: "rgba(100,168,100,0.15)", text: "#7CB87C", border: "rgba(100,168,100,0.3)" },
+    accent: "border-accent/25 bg-accent/15 text-accent-strong",
+    gold: "border-gold/25 bg-gold/12 text-gold",
+    blue: "border-sky-400/25 bg-sky-400/12 text-sky-200",
+    muted: "border-line bg-white/[0.04] text-muted",
+    danger: "border-orange-400/25 bg-orange-400/12 text-orange-200",
+    success: "border-emerald-400/25 bg-emerald-400/12 text-emerald-200",
   }
-  const c = colors[color] || colors.accent
+
   return (
-    <span style={{
-      fontSize: 11,
-      background: c.bg,
-      color: c.text,
-      border: `1px solid ${c.border}`,
-      padding: "3px 10px",
-      borderRadius: 99,
-      fontWeight: 500,
-      whiteSpace: "nowrap",
-    }}>{label}</span>
+    <span
+      className={cn(
+        "inline-flex items-center whitespace-nowrap rounded-full border px-2.5 py-1 text-[11px] font-medium leading-none",
+        colors[color] || colors.accent,
+        className,
+      )}
+    >
+      {label}
+    </span>
   )
 }
 
@@ -37,42 +38,44 @@ export function StatusBadge({ status }) {
 
 // Priority dot
 export function PriorityDot({ priority }) {
-  const colors = { low: "#7CB87C", medium: "#C9A84C", high: "#C9714C" }
+  const colors = {
+    low: "bg-emerald-400",
+    medium: "bg-gold",
+    high: "bg-orange-300",
+  }
+
   return (
-    <span style={{
-      width: 7, height: 7, borderRadius: "50%",
-      background: colors[priority] || colors.low,
-      display: "inline-block", flexShrink: 0,
-    }} />
+    <span className={cn("inline-block h-2 w-2 shrink-0 rounded-full", colors[priority] || colors.low)} />
   )
 }
 
 // Card
-export function Card({ children, style = {} }) {
+export function Card({ children, className }) {
   return (
-    <div style={{
-      background: "var(--card)",
-      borderRadius: "var(--radius-lg)",
-      padding: "20px 24px",
-      border: "1px solid rgba(153,151,124,0.12)",
-      ...style,
-    }}>
+    <div
+      className={cn(
+        "rounded-3xl border border-line/70 bg-[linear-gradient(180deg,rgba(81,72,61,0.96)_0%,rgba(67,59,50,0.96)_100%)] p-5 shadow-panel backdrop-blur-xl sm:p-6",
+        className,
+      )}
+    >
       {children}
     </div>
   )
 }
 
 // Stat card
-export function StatCard({ label, value, accent }) {
+export function StatCard({ label, value, accent, className }) {
   return (
-    <div style={{
-      background: "var(--surface)",
-      borderRadius: "var(--radius-lg)",
-      padding: "16px 20px",
-      border: "1px solid rgba(153,151,124,0.1)",
-    }}>
-      <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.08em" }}>{label}</div>
-      <div style={{ fontSize: 28, fontWeight: 700, fontFamily: "'Syne', sans-serif", color: accent || "var(--text)" }}>{value}</div>
+    <div
+      className={cn(
+        "rounded-3xl border border-line/70 bg-[linear-gradient(180deg,rgba(63,54,45,0.94)_0%,rgba(52,45,37,0.94)_100%)] px-5 py-4 shadow-soft",
+        className,
+      )}
+    >
+      <div className="mb-2.5 text-[11px] uppercase tracking-[0.08em] text-muted">{label}</div>
+      <div className="font-display text-3xl leading-none font-bold" style={{ color: accent ?? "var(--color-copy)" }}>
+        {value}
+      </div>
     </div>
   )
 }
@@ -81,97 +84,108 @@ export function StatCard({ label, value, accent }) {
 export function Avatar({ name, color, size = 36 }) {
   const initials = name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?"
   return (
-    <div style={{
-      width: size, height: size, borderRadius: "50%",
-      background: color || "var(--accent)",
-      display: "flex", alignItems: "center", justifyContent: "center",
-      fontSize: size * 0.33, fontWeight: 600,
-      color: "#1a1710", flexShrink: 0,
-    }}>{initials}</div>
+    <div
+      className="flex shrink-0 items-center justify-center rounded-full font-semibold text-canvas"
+      style={{
+        width: size,
+        height: size,
+        backgroundColor: color || "var(--color-accent)",
+        fontSize: size * 0.33,
+      }}
+    >
+      {initials}
+    </div>
   )
 }
 
 // Button
-export function Btn({ children, onClick, variant = "primary", size = "md", style = {} }) {
-  const sizes = { sm: { padding: "6px 14px", fontSize: 12 }, md: { padding: "9px 20px", fontSize: 13 }, lg: { padding: "12px 28px", fontSize: 14 } }
-  const variants = {
-    primary: { background: "var(--accent)", color: "#1e1d16", border: "none" },
-    ghost: { background: "transparent", color: "var(--accent)", border: "1px solid var(--accent)" },
-    gold: { background: "rgba(201,168,76,0.15)", color: "var(--gold)", border: "1px solid rgba(201,168,76,0.35)" },
-    danger: { background: "rgba(201,100,76,0.12)", color: "#C9714C", border: "1px solid rgba(201,100,76,0.3)" },
+export function Btn({ children, onClick, variant = "primary", size = "md", className, disabled = false, type = "button" }) {
+  const sizes = {
+    sm: "h-8 px-3.5 text-xs",
+    md: "h-10 px-4 text-sm",
+    lg: "h-11 px-5 text-sm",
   }
+  const variants = {
+    primary: "border-transparent bg-[linear-gradient(180deg,var(--color-accent-strong),var(--color-accent))] text-canvas shadow-[0_12px_28px_rgba(184,176,143,0.16)] hover:opacity-90",
+    ghost: "border-line/80 bg-white/[0.02] text-accent-strong hover:border-accent/40 hover:bg-white/[0.05] hover:text-copy",
+    gold: "border-gold/30 bg-gold/12 text-gold hover:bg-gold/18",
+    danger: "border-orange-400/25 bg-orange-400/12 text-orange-200 hover:bg-orange-400/18",
+  }
+
   return (
-    <button onClick={onClick} style={{
-      ...sizes[size],
-      ...variants[variant],
-      borderRadius: "var(--radius-md)",
-      fontWeight: 500,
-      cursor: "pointer",
-      fontFamily: "'Inter', sans-serif",
-      transition: "opacity 0.15s",
-      ...style,
-    }}
-      onMouseEnter={e => e.currentTarget.style.opacity = "0.8"}
-      onMouseLeave={e => e.currentTarget.style.opacity = "1"}
-    >{children}</button>
+    <button
+      className={className}
+      type={type}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        "inline-flex items-center justify-center rounded-2xl border font-medium transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55 disabled:hover:translate-y-0",
+        sizes[size],
+        variants[variant],
+        className,
+      )}
+    >
+      {children}
+    </button>
   )
 }
 
 // Input
-export function Input({ label, ...props }) {
+export function Input({ label, className, inputClassName, ...props }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {label && <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>{label}</label>}
-      <input {...props} style={{
-        background: "var(--surface)",
-        border: "1px solid rgba(153,151,124,0.2)",
-        borderRadius: "var(--radius-md)",
-        padding: "9px 12px",
-        fontSize: 13,
-        color: "var(--text)",
-        outline: "none",
-        fontFamily: "'Inter', sans-serif",
-        width: "100%",
-        ...props.style,
-      }}
-        onFocus={e => e.target.style.borderColor = "var(--accent)"}
-        onBlur={e => e.target.style.borderColor = "rgba(153,151,124,0.2)"}
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      {label && <label className="text-xs font-medium text-muted">{label}</label>}
+      <input
+        {...props}
+        className={cn(
+          "h-11 w-full rounded-2xl border border-line/80 bg-black/15 px-3.5 text-sm text-copy outline-none ring-0 transition placeholder:text-faint focus:border-accent/70 focus:bg-black/20",
+          inputClassName,
+        )}
       />
     </div>
   )
 }
 
 // Select
-export function Select({ label, options = [], ...props }) {
+export function Select({ label, options = [], className, selectClassName, ...props }) {
   return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      {label && <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>{label}</label>}
-      <select {...props} style={{
-        background: "var(--surface)",
-        border: "1px solid rgba(153,151,124,0.2)",
-        borderRadius: "var(--radius-md)",
-        padding: "9px 12px",
-        fontSize: 13,
-        color: "var(--text)",
-        outline: "none",
-        fontFamily: "'Inter', sans-serif",
-        width: "100%",
-        cursor: "pointer",
-        ...props.style,
-      }}>
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      {label && <label className="text-xs font-medium text-muted">{label}</label>}
+      <select
+        {...props}
+        className={cn(
+          "h-11 w-full cursor-pointer rounded-2xl border border-line/80 bg-black/15 px-3.5 text-sm text-copy outline-none transition focus:border-accent/70 focus:bg-black/20",
+          selectClassName,
+        )}
+      >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
     </div>
   )
 }
 
-// Page header
-export function PageHeader({ title, subtitle, action }) {
+export function TextArea({ label, className, textAreaClassName, ...props }) {
   return (
-    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 32 }}>
+    <div className={cn("flex flex-col gap-1.5", className)}>
+      {label && <label className="text-xs font-medium text-muted">{label}</label>}
+      <textarea
+        {...props}
+        className={cn(
+          "min-h-[92px] w-full rounded-2xl border border-line/80 bg-black/15 px-3.5 py-3 text-sm leading-6 text-copy outline-none transition placeholder:text-faint focus:border-accent/70 focus:bg-black/20",
+          textAreaClassName,
+        )}
+      />
+    </div>
+  )
+}
+
+// Page header
+export function PageHeader({ title, subtitle, action, className }) {
+  return (
+    <div className={cn("flex flex-wrap items-start justify-between gap-4", className)}>
       <div>
-        <h1 style={{ fontSize: 24, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>{title}</h1>
-        {subtitle && <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 4 }}>{subtitle}</p>}
+        <h1 className="font-display text-3xl leading-none font-bold tracking-[-0.03em] text-copy">{title}</h1>
+        {subtitle && <p className="mt-2 max-w-xl text-sm text-muted">{subtitle}</p>}
       </div>
       {action && <div>{action}</div>}
     </div>
@@ -180,14 +194,22 @@ export function PageHeader({ title, subtitle, action }) {
 
 // Divider
 export function Divider() {
-  return <div style={{ height: 1, background: "rgba(153,151,124,0.1)", margin: "20px 0" }} />
+  return <div className="my-5 h-px bg-line/60" />
 }
 
 // Empty state
 export function EmptyState({ message }) {
   return (
-    <div style={{ textAlign: "center", padding: "48px 0", color: "var(--faint)", fontSize: 13 }}>
+    <div className="py-12 text-center text-sm text-faint">
       {message || "Nothing here yet."}
+    </div>
+  )
+}
+
+export function LoadingScreen({ label = "Loading workspace..." }) {
+  return (
+    <div className="flex min-h-[42vh] items-center justify-center px-4 text-center text-xs font-medium uppercase tracking-[0.2em] text-muted sm:min-h-[56vh]">
+      {label}
     </div>
   )
 }

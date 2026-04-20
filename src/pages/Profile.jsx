@@ -1,99 +1,88 @@
-import { useState, useEffect, useRef } from "react"
+import { useState } from "react"
+import { Navigate } from "react-router-dom"
 import Layout from "../components/layout/Layout"
-import { Card, Avatar, Badge, Btn, Input, PageHeader } from "../components/ui"
-import { mockMembers } from "../utils/mockData"
+import { Card, Avatar, Badge, Btn, Input, Select, PageHeader } from "../components/ui"
+import { useUsers } from "../hooks/useUsers"
+import { useSessionUser } from "../hooks/useSessionUser"
 
 export default function Profile() {
-  const [currentUser, setCurrentUser] = useState(() => {
-    try {
-      const stored = localStorage.getItem("teamsync_user")
-      return stored ? JSON.parse(stored) : null
-    } catch {
-      return null
-    }
-  })
-  const [members, setMembers] = useState(mockMembers)
+  const { user: currentUser, setUser: setSessionUser } = useSessionUser()
+  const { users: userList, update: updateUser } = useUsers()
   const [editMode, setEditMode] = useState(false)
-  const [form, setForm] = useState({ name: "", photo: null })
+  const [form, setForm] = useState({
+    name: currentUser?.name ?? "",
+    photo: currentUser?.photo ?? null,
+  })
   const [passwordMode, setPasswordMode] = useState(false)
   const [selectedMember, setSelectedMember] = useState("")
   const [newPassword, setNewPassword] = useState("")
-  const fileInputRef = useRef(null)
 
-  useEffect(() => {
-    const stored = localStorage.getItem("teamsync_user")
-    if (stored) {
-      const user = JSON.parse(stored)
-      setCurrentUser(user)
-      setForm({ name: user.name, photo: user.photo })
-    }
-  }, [])
+  if (!currentUser) {
+    return <Navigate to="/login" replace />
+  }
 
-  const handleSave = () => {
+  const isAdmin = currentUser.role === "admin"
+
+  const handleSave = async () => {
     const updated = { ...currentUser, ...form }
-    setCurrentUser(updated)
-    localStorage.setItem("teamsync_user", JSON.stringify(updated))
-    setMembers(prev => prev.map(m => m.id === currentUser.id ? { ...m, ...form } : m))
+    setSessionUser(updated)
+    await updateUser(currentUser.id, form)
     setEditMode(false)
   }
 
-  const handlePasswordChange = () => {
+  const handlePasswordChange = async () => {
     if (!newPassword || !selectedMember) return
-    setMembers(prev => prev.map(m => m.id === selectedMember ? { ...m, password: newPassword } : m))
+
+    const member = userList.find((user) => user.id === selectedMember)
+    if (member) {
+      await updateUser(selectedMember, { ...member, password: newPassword })
+    }
+
     setNewPassword("")
     setSelectedMember("")
     setPasswordMode(false)
   }
 
-  if (!currentUser) {
-    return (
-      <div style={{ padding: 40, textAlign: "center" }}>
-        <p>Please log in to view your profile.</p>
-        <a href="/login">Go to Login</a>
-      </div>
-    )
-  }
-
-  const isAdmin = currentUser.role === "admin"
-
   return (
     <Layout role={currentUser.role} user={currentUser}>
-      <PageHeader
-        title="Profile"
-        subtitle="Manage your account settings"
-      />
+      <div className="mx-auto flex max-w-3xl flex-col gap-6">
+        <PageHeader
+          title="Profile"
+          subtitle="Manage your account settings"
+        />
 
-      <div style={{ display: "grid", gap: 24, maxWidth: 600 }}>
         <Card>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Your Profile</h3>
-          
-          <div style={{ display: "flex", alignItems: "center", gap: 20, marginBottom: 24 }}>
+          <h3 className="mb-5 text-sm font-semibold text-copy">Your Profile</h3>
+
+          <div className="mb-6 flex items-center gap-5">
             {form.photo ? (
-              <img src={form.photo} alt="Profile" style={{ width: 80, height: 80, borderRadius: "50%", objectFit: "cover" }} />
+              <img src={form.photo} alt="Profile" className="h-20 w-20 rounded-full object-cover" />
             ) : (
               <Avatar name={form.name} color={currentUser.color} size={80} />
             )}
+
             <div>
-              <label style={{ display: "flex", alignItems: "center", gap: 8, cursor: "pointer", fontSize: 13, color: "var(--accent)", fontWeight: 500 }}>
+              <label className="flex cursor-pointer items-center gap-2 text-sm font-medium text-accent">
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={e => {
-                    const file = e.target.files[0]
-                    if (file) {
-                      const reader = new FileReader()
-                      reader.onloadend = () => setForm({ ...form, photo: reader.result })
-                      reader.readAsDataURL(file)
-                    }
+                  className="hidden"
+                  onChange={(event) => {
+                    const file = event.target.files[0]
+                    if (!file) return
+
+                    const reader = new FileReader()
+                    reader.onloadend = () => setForm({ ...form, photo: reader.result })
+                    reader.readAsDataURL(file)
                   }}
-                  style={{ display: "none" }}
                 />
                 {form.photo ? "Change photo" : "Add photo"}
               </label>
+
               {form.photo && (
                 <button
                   onClick={() => setForm({ ...form, photo: null })}
-                  style={{ display: "block", marginTop: 6, fontSize: 11, color: "var(--muted)", background: "none", border: "none", cursor: "pointer" }}
+                  className="mt-1.5 block text-[11px] text-muted transition hover:text-copy"
                 >
                   Remove
                 </button>
@@ -101,84 +90,86 @@ export default function Profile() {
             </div>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 20 }}>
+          <div className="mb-5 grid gap-4 sm:grid-cols-2">
             <Input
               label="Display name"
               value={form.name}
-              onChange={e => setForm({ ...form, name: e.target.value })}
               placeholder="Your name"
+              onChange={(event) => setForm({ ...form, name: event.target.value })}
             />
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>Email</label>
-              <input
-                value={currentUser.email}
-                disabled
-                style={{
-                  background: "var(--surface)", border: "1px solid rgba(153,151,124,0.2)",
-                  borderRadius: "var(--radius-md)", padding: "9px 12px", fontSize: 13,
-                  color: "var(--muted)", opacity: 0.7,
-                }}
-              />
-            </div>
+            <Input label="Email" value={currentUser.email} disabled inputClassName="opacity-70" />
+
             <div>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: 6 }}>Role</label>
+              <label className="mb-1.5 block text-xs font-medium text-muted">Role</label>
               <Badge
                 label={currentUser.role}
-                color={currentUser.role === "admin" ? "gold" : currentUser.role === "pm" ? "blue" : currentUser.role === "member" ? "accent" : "muted"}
+                color={currentUser.role === "admin" ? "gold" : currentUser.role === "PL" ? "blue" : currentUser.role === "member" ? "accent" : "muted"}
               />
             </div>
+
             <div>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: 6 }}>Joined</label>
-              <p style={{ fontSize: 13, color: "var(--text)" }}>{currentUser.createdAt}</p>
+              <label className="mb-1.5 block text-xs font-medium text-muted">Joined</label>
+              <p className="text-sm text-copy">{currentUser.createdAt}</p>
             </div>
           </div>
 
           {!editMode ? (
             <Btn onClick={() => setEditMode(true)}>Save changes</Btn>
           ) : (
-            <div style={{ display: "flex", gap: 8 }}>
+            <div className="flex gap-2">
               <Btn onClick={handleSave}>Confirm</Btn>
-              <Btn variant="ghost" onClick={() => { setEditMode(false); setForm({ name: currentUser.name, photo: currentUser.photo }) }}>Cancel</Btn>
+              <Btn
+                variant="ghost"
+                onClick={() => {
+                  setEditMode(false)
+                  setForm({ name: currentUser.name, photo: currentUser.photo })
+                }}
+              >
+                Cancel
+              </Btn>
             </div>
           )}
         </Card>
 
         {isAdmin && (
           <Card>
-            <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Manage Member Passwords</h3>
-            <p style={{ fontSize: 12, color: "var(--muted)", marginBottom: 16 }}>As admin, you can view or reset passwords for team members.</p>
-            
+            <h3 className="mb-5 text-sm font-semibold text-copy">Manage Member Passwords</h3>
+            <p className="mb-4 text-sm text-muted">As admin, you can view or reset passwords for team members.</p>
+
             {!passwordMode ? (
               <Btn onClick={() => setPasswordMode(true)}>Change member password</Btn>
             ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: 12, alignItems: "flex-end" }}>
-                <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-                  <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>Select member</label>
-                  <select
-                    value={selectedMember}
-                    onChange={e => setSelectedMember(e.target.value)}
-                    style={{
-                      background: "var(--surface)", border: "1px solid rgba(153,151,124,0.2)",
-                      borderRadius: "var(--radius-md)", padding: "9px 12px", fontSize: 13,
-                      color: "var(--text)", cursor: "pointer",
-                    }}
-                  >
-                    <option value="">Select member...</option>
-                    {members.filter(m => m.role !== "admin").map(m => (
-                      <option key={m.id} value={m.id}>{m.name} ({m.email})</option>
-                    ))}
-                  </select>
-                </div>
+              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
+                <Select
+                  label="Select member"
+                  value={selectedMember}
+                  onChange={(event) => setSelectedMember(event.target.value)}
+                  options={[
+                    { value: "", label: "Select member..." },
+                    ...userList
+                      .filter((member) => member.role !== "admin")
+                      .map((member) => ({ value: member.id, label: `${member.name} (${member.email})` })),
+                  ]}
+                />
                 <Input
                   label="New password"
                   type="password"
                   placeholder="Enter new password"
                   value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
+                  onChange={(event) => setNewPassword(event.target.value)}
                 />
-                <div style={{ display: "flex", gap: 8 }}>
+                <div className="flex gap-2">
                   <Btn onClick={handlePasswordChange}>Update</Btn>
-                  <Btn variant="ghost" onClick={() => { setPasswordMode(false); setSelectedMember(""); setNewPassword("") }}>Cancel</Btn>
+                  <Btn
+                    variant="ghost"
+                    onClick={() => {
+                      setPasswordMode(false)
+                      setSelectedMember("")
+                      setNewPassword("")
+                    }}
+                  >
+                    Cancel
+                  </Btn>
                 </div>
               </div>
             )}

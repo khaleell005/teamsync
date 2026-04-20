@@ -1,99 +1,98 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Layout from "../../components/layout/Layout"
-import { Card, Avatar, Badge, StatusBadge, PriorityDot, Btn, Input, Select, PageHeader, Divider, EmptyState } from "../../components/ui"
-import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
+import { Card, Avatar, StatusBadge, PriorityDot, Btn, Input, Select, TextArea, PageHeader, Divider, EmptyState, LoadingScreen } from "../../components/ui"
+import { useTasks } from "../../hooks/useTasks"
+import { useProjects } from "../../hooks/useProjects"
+import { useUsers } from "../../hooks/useUsers"
+import { formatDisplayDate } from "../../lib/appData"
+import { useSessionUser } from "../../hooks/useSessionUser"
 
 export default function ManageTasks() {
+  const { user: adminUser } = useSessionUser()
+  const { tasks, add: addTask, update: updateTask, remove: removeTask, loading: tasksLoading } = useTasks()
+  const { projects, loading: projectsLoading } = useProjects()
+  const { users, loading: usersLoading } = useUsers()
   const [state, setState] = useState({
-    user: null,
-    ready: false,
-    tasks: mockTasks,
     showForm: false,
     filter: "all",
     editingId: null,
-    form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" }
+    form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
   })
 
-  useEffect(() => {
-    const stored = localStorage.getItem("teamsync_user")
-    if (stored) {
-      const user = JSON.parse(stored)
-      if (user.role === "admin") {
-        setState(s => ({ ...s, user, ready: true }))
-      } else {
-        window.location.href = "/dashboard"
-      }
-    } else {
-      window.location.href = "/login"
-    }
-  }, [])
-
-  if (!state.ready || !state.user) {
-    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "var(--base)", color: "var(--text)" }}>Loading...</div>
+  if (!adminUser || tasksLoading || projectsLoading || usersLoading) {
+    return <LoadingScreen label="Loading tasks..." />
   }
 
-  const adminUser = state.user
-  const tasks = state.tasks
-  const showForm = state.showForm
-  const filter = state.filter
-  const editingId = state.editingId
-  const form = state.form
-  const updateState = (updates) => setState(s => ({ ...s, ...updates }))
+  const { showForm, filter, editingId, form } = state
+  const updateState = (updates) => setState((currentState) => ({ ...currentState, ...updates }))
+  const getUser = (id) => users.find((user) => user.id === id)
+  const getProject = (id) => projects.find((project) => project.id === id)
+  const filteredTasks = filter === "all" ? tasks : tasks.filter((task) => task.status === filter)
 
-  const getUser = (id) => mockMembers.find(m => m.id === id)
-  const getProject = (id) => mockProjects.find(p => p.id === id)
-
-  const filtered = filter === "all" ? tasks : tasks.filter(t => t.status === filter)
-
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.title || !form.projectId) return
-    const newTask = {
-      id: `t${Date.now()}`,
+
+    await addTask({
       ...form,
       assignedTo: form.assignedTo || null,
       status: "not_started",
       progressNote: "",
-      createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    }
+      createdAt: formatDisplayDate(),
+    })
+
     updateState({
-      tasks: [...state.tasks, newTask],
       form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
-      showForm: false
+      showForm: false,
     })
   }
-
-  const handleDelete = (id) => updateState({ tasks: state.tasks.filter(t => t.id !== id) })
 
   const handleEdit = (task) => {
     updateState({
-      form: { title: task.title, description: task.description || "", projectId: task.projectId, assignedTo: task.assignedTo || "", priority: task.priority, deadline: task.deadline || "" },
+      form: {
+        title: task.title,
+        description: task.description || "",
+        projectId: task.projectId,
+        assignedTo: task.assignedTo || "",
+        priority: task.priority,
+        deadline: task.deadline || "",
+      },
       editingId: task.id,
-      showForm: true
+      showForm: true,
     })
   }
 
-  const handleUpdate = () => {
+  const handleUpdate = async () => {
     if (!form.title || !form.projectId) return
+
+    const currentTask = tasks.find((task) => task.id === editingId)
+    await updateTask(editingId, {
+      ...currentTask,
+      ...form,
+      assignedTo: form.assignedTo || null,
+    })
+
     updateState({
-      tasks: state.tasks.map(t => t.id === editingId ? { ...t, ...form, assignedTo: form.assignedTo || null } : t),
       form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
       editingId: null,
-      showForm: false
+      showForm: false,
     })
   }
 
-  const cancelEdit = () => {
+  const resetForm = () => {
     updateState({
       form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
       editingId: null,
-      showForm: false
+      showForm: false,
     })
   }
 
-  const projectOptions = [{ value: "", label: "Select project" }, ...mockProjects.map(p => ({ value: p.id, label: p.name }))]
-  const memberOptions = [{ value: "", label: "Unassigned" }, ...mockMembers.filter(m => m.role !== "admin").map(m => ({ value: m.id, label: m.name }))]
-  const priorityOptions = [{ value: "low", label: "Low" }, { value: "medium", label: "Medium" }, { value: "high", label: "High" }]
-
+  const projectOptions = [{ value: "", label: "Select project" }, ...projects.map((project) => ({ value: project.id, label: project.name }))]
+  const memberOptions = [{ value: "", label: "Unassigned" }, ...users.filter((user) => user.role !== "admin").map((user) => ({ value: user.id, label: user.name }))]
+  const priorityOptions = [
+    { value: "low", label: "Low" },
+    { value: "medium", label: "Medium" },
+    { value: "high", label: "High" },
+  ]
   const filterTabs = [
     { key: "all", label: "All" },
     { key: "not_started", label: "Not started" },
@@ -103,109 +102,109 @@ export default function ManageTasks() {
 
   return (
     <Layout role="admin" user={{ name: adminUser.name, role: adminUser.role, color: adminUser.color }}>
-      <PageHeader
-        title="Tasks"
-        subtitle={`${tasks.length} total tasks across all projects`}
-        action={<Btn onClick={() => updateState({ showForm: !showForm, editingId: null, form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" } })}>
-          {showForm ? "Cancel" : "+ New task"}
-        </Btn>}
-      />
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Tasks"
+          subtitle={`${tasks.length} total tasks across all projects`}
+          action={
+            <Btn
+              onClick={() =>
+                updateState({
+                  showForm: !showForm,
+                  editingId: null,
+                  form: { title: "", description: "", projectId: "", assignedTo: "", priority: "medium", deadline: "" },
+                })
+              }
+            >
+              {showForm ? "Cancel" : "+ New task"}
+            </Btn>
+          }
+        />
 
-      {showForm && (
-        <Card style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Create task</h3>
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 16 }}>
-            <Input label="Task title" placeholder="e.g. Redesign landing page" value={form.title} onChange={e => updateState({ form: { ...form, title: e.target.value } })} />
-            <Select label="Project" value={form.projectId} onChange={e => updateState({ form: { ...form, projectId: e.target.value } })} options={projectOptions} />
-            <Select label="Assign to" value={form.assignedTo} onChange={e => updateState({ form: { ...form, assignedTo: e.target.value } })} options={memberOptions} />
-            <Select label="Priority" value={form.priority} onChange={e => updateState({ form: { ...form, priority: e.target.value } })} options={priorityOptions} />
-            <Input label="Deadline" type="text" placeholder="e.g. Apr 30, 2025" value={form.deadline} onChange={e => updateState({ form: { ...form, deadline: e.target.value } })} />
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>Description</label>
-              <textarea
-                placeholder="Task details..."
-                value={form.description}
-                onChange={e => updateState({ form: { ...form, description: e.target.value } })}
-                rows={2}
-                style={{
-                  background: "var(--surface)", border: "1px solid rgba(153,151,124,0.2)",
-                  borderRadius: "var(--radius-md)", padding: "9px 12px", fontSize: 13,
-                  color: "var(--text)", outline: "none", fontFamily: "'Inter', sans-serif", resize: "vertical",
-                }}
-              />
+        {showForm && (
+          <Card>
+            <h3 className="mb-5 text-sm font-semibold text-copy">Create task</h3>
+            <div className="mb-4 grid gap-4 sm:grid-cols-2">
+              <Input label="Task title" placeholder="e.g. Redesign landing page" value={form.title} onChange={(event) => updateState({ form: { ...form, title: event.target.value } })} />
+              <Select label="Project" value={form.projectId} onChange={(event) => updateState({ form: { ...form, projectId: event.target.value } })} options={projectOptions} />
+              <Select label="Assign to" value={form.assignedTo} onChange={(event) => updateState({ form: { ...form, assignedTo: event.target.value } })} options={memberOptions} />
+              <Select label="Priority" value={form.priority} onChange={(event) => updateState({ form: { ...form, priority: event.target.value } })} options={priorityOptions} />
+              <Input label="Deadline" type="text" placeholder="e.g. Apr 30, 2025" value={form.deadline} onChange={(event) => updateState({ form: { ...form, deadline: event.target.value } })} />
+              <TextArea label="Description" placeholder="Task details..." value={form.description} onChange={(event) => updateState({ form: { ...form, description: event.target.value } })} rows={2} />
             </div>
-          </div>
-          <div style={{ display: "flex", gap: 8 }}>
-            <Btn onClick={editingId ? handleUpdate : handleAdd}>{editingId ? "Update task" : "Create task"}</Btn>
-            {editingId && <Btn variant="ghost" onClick={cancelEdit}>Cancel</Btn>}
-          </div>
-        </Card>
-      )}
+            <div className="flex gap-2">
+              <Btn onClick={editingId ? handleUpdate : handleAdd}>{editingId ? "Update task" : "Create task"}</Btn>
+              {editingId && <Btn variant="ghost" onClick={resetForm}>Cancel</Btn>}
+            </div>
+          </Card>
+        )}
 
-      <div style={{ display: "flex", gap: 6, marginBottom: 20 }}>
-        {filterTabs.map(tab => (
-          <button
-            key={tab.key}
-            onClick={() => updateState({ filter: tab.key })}
-            style={{
-              padding: "6px 14px", borderRadius: 99, fontSize: 12, cursor: "pointer",
-              background: filter === tab.key ? "var(--accent)" : "var(--surface)",
-              color: filter === tab.key ? "#1e1d16" : "var(--muted)",
-              border: "1px solid",
-              borderColor: filter === tab.key ? "var(--accent)" : "rgba(153,151,124,0.2)",
-              fontWeight: filter === tab.key ? 500 : 400,
-              transition: "all 0.15s",
-            }}
-          >{tab.label}</button>
-        ))}
-      </div>
-
-      <Card>
-        <div style={{
-          display: "grid", gridTemplateColumns: "2.5fr 1.5fr 1fr 1fr 1fr 120px",
-          padding: "8px 12px", marginBottom: 4,
-        }}>
-          {["Task", "Project", "Assignee", "Priority", "Status", ""].map((h, i) => (
-            <span key={i} style={{ fontSize: 10, color: "var(--faint)", textTransform: "uppercase", letterSpacing: "0.1em" }}>{h}</span>
+        <div className="flex flex-wrap gap-2">
+          {filterTabs.map((tab) => (
+            <button
+              key={tab.key}
+              onClick={() => updateState({ filter: tab.key })}
+              className={`rounded-full border px-3.5 py-1.5 text-xs transition ${
+                filter === tab.key
+                  ? "border-accent bg-[linear-gradient(180deg,var(--color-accent-strong),var(--color-accent))] font-medium text-canvas"
+                  : "border-line/80 bg-white/[0.03] text-muted hover:text-copy"
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
-        <Divider />
 
-        {filtered.length === 0 && <EmptyState message="No tasks found." />}
+        <Card>
+          <div className="overflow-x-auto">
+            <div className="min-w-[840px]">
+              <div className="grid grid-cols-[2.5fr_1.5fr_1fr_1fr_1fr_120px] px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-faint">
+                {["Task", "Project", "Assignee", "Priority", "Status", ""].map((heading) => (
+                  <span key={heading}>{heading}</span>
+                ))}
+              </div>
 
-        {filtered.map(task => {
-          const assignee = getUser(task.assignedTo)
-          const project = getProject(task.projectId)
-          return (
-            <div key={task.id} style={{
-              display: "grid", gridTemplateColumns: "2.5fr 1.5fr 1fr 1fr 1fr 120px",
-              alignItems: "center", padding: "12px 12px",
-              borderRadius: "var(--radius-md)", transition: "background 0.15s",
-            }}
-              onMouseEnter={e => e.currentTarget.style.background = "rgba(153,151,124,0.06)"}
-              onMouseLeave={e => e.currentTarget.style.background = "transparent"}
-            >
-              <div>
-                <p style={{ fontSize: 13, fontWeight: 500, color: "var(--text)" }}>{task.title}</p>
-                {task.deadline && <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 1 }}>Due {task.deadline}</p>}
-              </div>
-              <p style={{ fontSize: 12, color: "var(--muted)" }}>{project?.name || "—"}</p>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                {assignee ? <><Avatar name={assignee.name} color={assignee.color} size={22} /><span style={{ fontSize: 12, color: "var(--muted)" }}>{assignee.name.split(" ")[0]}</span></> : <span style={{ fontSize: 11, color: "var(--faint)" }}>Unassigned</span>}
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                <PriorityDot priority={task.priority} />
-                <span style={{ fontSize: 12, color: "var(--muted)", textTransform: "capitalize" }}>{task.priority}</span>
-              </div>
-              <StatusBadge status={task.status} />
-              <div style={{ display: "flex", justifyContent: "flex-end", gap: 6 }}>
-                <Btn variant="ghost" size="sm" onClick={() => handleEdit(task)}>Edit</Btn>
-                <Btn variant="danger" size="sm" onClick={() => handleDelete(task.id)}>Delete</Btn>
-              </div>
+              <Divider />
+
+              {filteredTasks.length === 0 && <EmptyState message="No tasks found." />}
+
+              {filteredTasks.map((task) => {
+                const assignee = getUser(task.assignedTo)
+                const project = getProject(task.projectId)
+
+                return (
+                  <div key={task.id} className="grid grid-cols-[2.5fr_1.5fr_1fr_1fr_1fr_120px] items-center rounded-2xl px-3 py-3 transition hover:bg-white/[0.03]">
+                    <div>
+                      <p className="text-sm font-medium text-copy">{task.title}</p>
+                      {task.deadline && <p className="mt-0.5 text-[11px] text-muted">Due {task.deadline}</p>}
+                    </div>
+                    <p className="text-sm text-muted">{project?.name || "—"}</p>
+                    <div className="flex items-center gap-2">
+                      {assignee ? (
+                        <>
+                          <Avatar name={assignee.name} color={assignee.color} size={22} />
+                          <span className="text-sm text-muted">{assignee.name.split(" ")[0]}</span>
+                        </>
+                      ) : (
+                        <span className="text-[11px] text-faint">Unassigned</span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <PriorityDot priority={task.priority} />
+                      <span className="text-sm capitalize text-muted">{task.priority}</span>
+                    </div>
+                    <StatusBadge status={task.status} />
+                    <div className="flex justify-end gap-2">
+                      <Btn variant="ghost" size="sm" onClick={() => handleEdit(task)}>Edit</Btn>
+                      <Btn variant="danger" size="sm" onClick={() => removeTask(task.id)}>Delete</Btn>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
-          )
-        })}
-      </Card>
+          </div>
+        </Card>
+      </div>
     </Layout>
   )
 }

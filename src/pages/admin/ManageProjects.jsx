@@ -1,186 +1,179 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Layout from "../../components/layout/Layout"
-import { Card, Avatar, Badge, Btn, Input, PageHeader, Divider, EmptyState } from "../../components/ui"
-import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
+import { Card, Avatar, Badge, Btn, Input, TextArea, PageHeader, Divider, EmptyState, LoadingScreen } from "../../components/ui"
+import { useProjects } from "../../hooks/useProjects"
+import { useUsers } from "../../hooks/useUsers"
+import { useTasks } from "../../hooks/useTasks"
+import { formatDisplayDate } from "../../lib/appData"
+import { useSessionUser } from "../../hooks/useSessionUser"
 
 export default function ManageProjects() {
+  const { user: adminUser } = useSessionUser()
+  const { projects, add, update, loading: projectsLoading } = useProjects()
+  const { users: userList, loading: usersLoading } = useUsers()
+  const { tasks: taskList, loading: tasksLoading } = useTasks()
   const [state, setState] = useState({
-    user: null,
-    ready: false,
-    projects: mockProjects,
     showForm: false,
-    form: { name: "", description: "", leadId: "", memberIds: [] }
+    form: { name: "", description: "", leadId: "", memberIds: [] },
   })
 
-  useEffect(() => {
-    const stored = localStorage.getItem("teamsync_user")
-    if (stored) {
-      const user = JSON.parse(stored)
-      if (user.role === "admin") {
-        setState(s => ({ ...s, user, ready: true }))
-      } else {
-        window.location.href = "/dashboard"
-      }
-    } else {
-      window.location.href = "/login"
-    }
-  }, [])
-
-  if (!state.ready || !state.user) {
-    return <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", background: "var(--base)", color: "var(--text)" }}>Loading...</div>
+  if (!adminUser || projectsLoading || usersLoading || tasksLoading) {
+    return <LoadingScreen label="Loading projects..." />
   }
 
-  const adminUser = state.user
-  const projects = state.projects
-  const showForm = state.showForm
-  const form = state.form
-  const updateState = (updates) => setState(s => ({ ...s, ...updates }))
-
-  const getUser = (id) => mockMembers.find(m => m.id === id)
-  const getTaskCount = (pid) => mockTasks.filter(t => t.projectId === pid).length
+  const { showForm, form } = state
+  const updateState = (updates) => setState((currentState) => ({ ...currentState, ...updates }))
+  const getUser = (id) => userList.find((user) => user.id === id)
+  const getTaskCount = (projectId) => taskList.filter((task) => task.projectId === projectId).length
 
   const toggleMember = (id) => {
     updateState({
       form: {
         ...form,
-        memberIds: form.memberIds.includes(id) ? form.memberIds.filter(m => m !== id) : [...form.memberIds, id],
-      }
+        memberIds: form.memberIds.includes(id)
+          ? form.memberIds.filter((memberId) => memberId !== id)
+          : [...form.memberIds, id],
+      },
     })
   }
 
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!form.name) return
-    const newProject = {
-      id: `p${Date.now()}`,
+
+    await add({
       ...form,
       status: "active",
-      createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-    }
+      createdAt: formatDisplayDate(),
+    })
+
     updateState({
-      projects: [...state.projects, newProject],
       form: { name: "", description: "", leadId: "", memberIds: [] },
-      showForm: false
+      showForm: false,
     })
   }
 
-  const toggleStatus = (id) => {
-    updateState({
-      projects: state.projects.map(p => p.id === id ? { ...p, status: p.status === "active" ? "completed" : "active" } : p)
+  const toggleStatus = async (id) => {
+    const project = projects.find((item) => item.id === id)
+    if (!project) return
+
+    await update(id, {
+      ...project,
+      status: project.status === "active" ? "completed" : "active",
     })
   }
 
   return (
     <Layout role="admin" user={{ name: adminUser.name, role: adminUser.role, color: adminUser.color }}>
-      <PageHeader
-        title="Projects"
-        subtitle={`${projects.filter(p => p.status === "active").length} active · ${projects.filter(p => p.status === "completed").length} completed`}
-        action={<Btn onClick={() => updateState({ showForm: !showForm })}>{showForm ? "Cancel" : "+ New project"}</Btn>}
-      />
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Projects"
+          subtitle={`${projects.filter((project) => project.status === "active").length} active · ${projects.filter((project) => project.status === "completed").length} completed`}
+          action={<Btn onClick={() => updateState({ showForm: !showForm })}>{showForm ? "Cancel" : "+ New project"}</Btn>}
+        />
 
-      {showForm && (
-        <Card style={{ marginBottom: 24 }}>
-          <h3 style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", marginBottom: 20 }}>Create project</h3>
-          <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-            <Input label="Project name" placeholder="e.g. NexaFlow Rebrand" value={form.name} onChange={e => updateState({ form: { ...form, name: e.target.value } })} />
-            <div>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: 10 }}>Project Lead</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {mockMembers.filter(m => m.role === "pm" || m.role === "member").map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => updateState({ form: { ...form, leadId: m.id } })}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "6px 12px",
-                      borderRadius: 99, cursor: "pointer", transition: "all 0.15s",
-                      background: form.leadId === m.id ? "rgba(153,151,124,0.2)" : "var(--surface)",
-                      border: form.leadId === m.id ? "1px solid var(--accent)" : "1px solid rgba(153,151,124,0.2)",
-                      color: form.leadId === m.id ? "var(--text)" : "var(--muted)",
-                    }}
-                  >
-                    <Avatar name={m.name} color={m.color} size={20} />
-                    <span style={{ fontSize: 12 }}>{m.name}</span>
-                  </button>
-                ))}
+        {showForm && (
+          <Card>
+            <h3 className="mb-5 text-sm font-semibold text-copy">Create project</h3>
+            <div className="flex flex-col gap-4">
+              <Input label="Project name" placeholder="e.g. NexaFlow Rebrand" value={form.name} onChange={(event) => updateState({ form: { ...form, name: event.target.value } })} />
+
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Project Lead</label>
+                <div className="flex flex-wrap gap-2">
+                  {userList.filter((user) => user.role === "PL" || user.role === "member").map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => updateState({ form: { ...form, leadId: user.id } })}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${
+                        form.leadId === user.id
+                          ? "border-accent/60 bg-accent/18 text-copy"
+                          : "border-line/70 bg-surface/70 text-muted hover:text-copy"
+                      }`}
+                    >
+                      <Avatar name={user.name} color={user.color} size={20} />
+                      <span>{user.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500 }}>Description</label>
-              <textarea
+
+              <TextArea
+                label="Description"
                 placeholder="Brief description of this project..."
                 value={form.description}
-                onChange={e => updateState({ form: { ...form, description: e.target.value } })}
+                onChange={(event) => updateState({ form: { ...form, description: event.target.value } })}
                 rows={2}
-                style={{
-                  background: "var(--surface)", border: "1px solid rgba(153,151,124,0.2)",
-                  borderRadius: "var(--radius-md)", padding: "9px 12px", fontSize: 13,
-                  color: "var(--text)", outline: "none", fontFamily: "'Inter', sans-serif",
-                  resize: "vertical",
-                }}
               />
-            </div>
-            <div>
-              <label style={{ fontSize: 12, color: "var(--muted)", fontWeight: 500, display: "block", marginBottom: 10 }}>Assign members</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-                {mockMembers.filter(m => m.role !== "admin").map(m => (
-                  <button
-                    key={m.id}
-                    onClick={() => toggleMember(m.id)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "6px 12px",
-                      borderRadius: 99, cursor: "pointer", transition: "all 0.15s",
-                      background: form.memberIds.includes(m.id) ? "rgba(153,151,124,0.2)" : "var(--surface)",
-                      border: form.memberIds.includes(m.id) ? "1px solid var(--accent)" : "1px solid rgba(153,151,124,0.2)",
-                      color: form.memberIds.includes(m.id) ? "var(--text)" : "var(--muted)",
-                    }}
-                  >
-                    <Avatar name={m.name} color={m.color} size={20} />
-                    <span style={{ fontSize: 12 }}>{m.name}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div><Btn onClick={handleAdd}>Create project</Btn></div>
-          </div>
-        </Card>
-      )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-        {projects.length === 0 && <EmptyState message="No projects yet. Create your first one." />}
-        {projects.map(p => (
-          <Card key={p.id}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 12 }}>
-              <div style={{ flex: 1, marginRight: 12 }}>
-                <h3 style={{ fontSize: 15, fontWeight: 600, color: "var(--text)" }}>{p.name}</h3>
-                <p style={{ fontSize: 12, color: "var(--muted)", marginTop: 4, lineHeight: 1.5 }}>{p.description}</p>
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Assign members</label>
+                <div className="flex flex-wrap gap-2">
+                  {userList.filter((user) => user.role !== "admin").map((user) => (
+                    <button
+                      key={user.id}
+                      onClick={() => toggleMember(user.id)}
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${
+                        form.memberIds.includes(user.id)
+                          ? "border-accent/60 bg-accent/18 text-copy"
+                          : "border-line/70 bg-surface/70 text-muted hover:text-copy"
+                      }`}
+                    >
+                      <Avatar name={user.name} color={user.color} size={20} />
+                      <span>{user.name}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
-              <Badge label={p.status === "active" ? "Active" : "Completed"} color={p.status === "active" ? "success" : "muted"} />
-            </div>
 
-            <Divider />
-
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center" }}>
-                {p.leadId && getUser(p.leadId) && (
-                  <div style={{ marginRight: 8, display: "flex", alignItems: "center", gap: 4 }}>
-                    <span style={{ fontSize: 10, color: "var(--muted)" }}>Lead:</span>
-                    <Avatar name={getUser(p.leadId).name} color={getUser(p.leadId).color} size={22} />
-                  </div>
-                )}
-                {p.memberIds.map(mid => {
-                  const m = getUser(mid)
-                  return m && m.id !== p.leadId ? <div key={mid} style={{ marginRight: -6 }} title={m.name}><Avatar name={m.name} color={m.color} size={26} /></div> : null
-                })}
-                <span style={{ fontSize: 11, color: "var(--muted)", marginLeft: 14 }}>{p.memberIds.length} members</span>
-              </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 11, color: "var(--muted)" }}>{getTaskCount(p.id)} tasks</span>
-                <Btn variant="ghost" size="sm" onClick={() => toggleStatus(p.id)}>
-                  {p.status === "active" ? "Mark done" : "Reopen"}
-                </Btn>
-              </div>
+              <div><Btn onClick={handleAdd}>Create project</Btn></div>
             </div>
           </Card>
-        ))}
+        )}
+
+        <div className="grid gap-4 xl:grid-cols-2">
+          {projects.length === 0 && <EmptyState message="No projects yet. Create your first one." />}
+
+          {projects.map((project) => (
+            <Card key={project.id}>
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0 flex-1">
+                  <h3 className="text-[15px] font-semibold text-copy">{project.name}</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted">{project.description}</p>
+                </div>
+                <Badge label={project.status === "active" ? "Active" : "Completed"} color={project.status === "active" ? "success" : "muted"} />
+              </div>
+
+              <Divider />
+
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-y-2">
+                  {project.leadId && getUser(project.leadId) && (
+                    <div className="mr-2 flex items-center gap-1.5">
+                      <span className="text-[10px] text-muted">Lead:</span>
+                      <Avatar name={getUser(project.leadId).name} color={getUser(project.leadId).color} size={22} />
+                    </div>
+                  )}
+                  {project.memberIds.map((memberId) => {
+                    const member = getUser(memberId)
+                    return member && member.id !== project.leadId ? (
+                      <div key={memberId} className="-mr-1.5" title={member.name}>
+                        <Avatar name={member.name} color={member.color} size={26} />
+                      </div>
+                    ) : null
+                  })}
+                  <span className="ml-4 text-[11px] text-muted">{project.memberIds.length} members</span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <span className="text-[11px] text-muted">{getTaskCount(project.id)} tasks</span>
+                  <Btn variant="ghost" size="sm" onClick={() => toggleStatus(project.id)}>
+                    {project.status === "active" ? "Mark done" : "Reopen"}
+                  </Btn>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
       </div>
     </Layout>
   )

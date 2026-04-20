@@ -1,67 +1,57 @@
 import { useState } from "react"
-import { useNavigate } from "react-router-dom"
+import { Navigate, useNavigate } from "react-router-dom"
 import { Input, Btn } from "../components/ui"
-import { mockMembers } from "../utils/mockData"
+import { useAuth } from "../hooks/useAuth"
+import { useSessionUser } from "../hooks/useSessionUser"
 
 export default function Login() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [message, setMessage] = useState("")
+  
+  const { login } = useAuth()
+  const { user: sessionUser, homeRoute } = useSessionUser()
   const navigate = useNavigate()
 
-  const handleLogin = () => {
+  if (sessionUser) {
+    return <Navigate to={homeRoute} replace />
+  }
+
+  const handleLogin = async () => {
     if (!email || !password) {
-      setError("Please enter email and password")
+      setMessage("Please enter email and password")
       return
     }
-    const user = mockMembers.find(m => m.email.toLowerCase() === email.toLowerCase() && m.password === password)
-    if (user) {
-      localStorage.setItem("teamsync_user", JSON.stringify(user))
-      if (user.role === "admin") {
+    setLoading(true)
+    setMessage("")
+    try {
+      const user = await login(email, password)
+      if (user?.role === "admin") {
         navigate("/admin/dashboard")
       } else {
         navigate("/dashboard")
       }
-    } else {
-      setError("Invalid email or password")
+    } catch {
+      setMessage("Invalid email or password")
+    } finally {
+      setLoading(false)
     }
   }
 
   return (
-    <div style={{
-      minHeight: "100vh",
-      background: "var(--base)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: 24,
-    }}>
-      <div style={{ width: "100%", maxWidth: 400 }}>
-
-        <div style={{ textAlign: "center", marginBottom: 40 }}>
-          <div style={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            width: 52,
-            height: 52,
-            borderRadius: "var(--radius-lg)",
-            background: "var(--surface)",
-            border: "1px solid rgba(153,151,124,0.2)",
-            marginBottom: 20,
-            fontSize: 22,
-          }}>◈</div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: "var(--text)", letterSpacing: "-0.02em" }}>TeamSync</h1>
-          <p style={{ fontSize: 13, color: "var(--muted)", marginTop: 6 }}>Sign in to your workspace</p>
+    <div className="flex min-h-screen items-center justify-center bg-[radial-gradient(circle_at_top,rgba(214,174,71,0.12),transparent_26%),radial-gradient(circle_at_bottom_right,rgba(184,176,143,0.12),transparent_20%)] px-6 py-10">
+      <div className="w-full max-w-md">
+        <div className="mb-10 text-center">
+          <div className="mb-5 inline-flex h-13 w-13 items-center justify-center rounded-3xl border border-line/70 bg-[linear-gradient(180deg,rgba(63,54,45,0.96),rgba(44,38,31,0.96))] text-[22px] shadow-soft">
+            ◈
+          </div>
+          <h1 className="font-display text-3xl font-bold tracking-[-0.02em] text-copy">TeamSync</h1>
+          <p className="mt-1.5 text-sm text-muted">Sign in to your workspace</p>
         </div>
 
-        <div style={{
-          background: "var(--surface)",
-          borderRadius: "var(--radius-xl)",
-          padding: "32px 28px",
-          border: "1px solid rgba(153,151,124,0.15)",
-        }}>
-          <div style={{ display: "flex", flexDirection: "column", gap: 18 }}>
+        <div className="rounded-[28px] border border-line/70 bg-[linear-gradient(180deg,rgba(63,54,45,0.95)_0%,rgba(48,41,34,0.95)_100%)] px-7 py-8 shadow-panel backdrop-blur-xl">
+          <div className="flex flex-col gap-4.5">
             <Input
               label="Email address"
               type="email"
@@ -77,29 +67,23 @@ export default function Login() {
               onChange={e => setPassword(e.target.value)}
             />
 
-            {error && <p style={{ fontSize: 12, color: "#C9714C" }}>{error}</p>}
+            {message && <p className="text-xs text-orange-200">{message}</p>}
 
-            <div style={{ marginTop: 4 }}>
-              <Btn style={{ width: "100%", justifyContent: "center" }} onClick={handleLogin}>
-                Sign in
+            <div className="mt-1">
+              <Btn className="w-full" onClick={handleLogin} disabled={loading}>
+                {loading ? "Please wait..." : "Sign in"}
               </Btn>
             </div>
           </div>
 
-          <div style={{
-            marginTop: 24,
-            padding: "12px 16px",
-            background: "rgba(153,151,124,0.08)",
-            borderRadius: "var(--radius-md)",
-            border: "1px solid rgba(153,151,124,0.12)",
-          }}>
-            <p style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.6 }}>
-              <span style={{ color: "var(--accent)", fontWeight: 500 }}>Note:</span> Accounts are created by your team admin. Contact them if you don't have login credentials.
+          <div className="mt-6 rounded-2xl border border-line/70 bg-white/[0.03] px-4 py-3">
+            <p className="text-[11px] leading-6 text-muted">
+              <span className="font-medium text-accent">Note:</span> Accounts are created by your team admin. Contact them if you don&apos;t have login credentials.
             </p>
           </div>
         </div>
 
-        <p style={{ textAlign: "center", fontSize: 11, color: "var(--faint)", marginTop: 24 }}>
+        <p className="mt-6 text-center text-[11px] text-faint">
           TeamSync · Role-based team workspace
         </p>
       </div>

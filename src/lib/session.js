@@ -1,0 +1,43 @@
+const SESSION_KEY = "teamsync_user"
+
+export function normalizeUser(rawUser) {
+  if (!rawUser) return null
+
+  const id = rawUser.id ?? rawUser.uid ?? null
+
+  return {
+    ...rawUser,
+    id,
+    uid: rawUser.uid ?? id,
+  }
+}
+
+export function getStoredUser() {
+  try {
+    const stored = localStorage.getItem(SESSION_KEY)
+    return stored ? normalizeUser(JSON.parse(stored)) : null
+  } catch {
+    return null
+  }
+}
+
+export function setStoredUser(user) {
+  const normalizedUser = normalizeUser(user)
+
+  if (!normalizedUser) {
+    localStorage.removeItem(SESSION_KEY)
+    return null
+  }
+
+  localStorage.setItem(SESSION_KEY, JSON.stringify(normalizedUser))
+  return normalizedUser
+}
+
+export function clearStoredUser() {
+  localStorage.removeItem(SESSION_KEY)
+}
+
+export function getHomeRoute(user) {
+  if (!user) return "/login"
+  return user.role === "admin" ? "/admin/dashboard" : "/dashboard"
+}

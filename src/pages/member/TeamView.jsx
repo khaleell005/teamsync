@@ -1,159 +1,123 @@
-import { useState, useEffect } from "react"
+import { useState } from "react"
 import Layout from "../../components/layout/Layout"
-import { Card, Avatar, StatusBadge, PriorityDot, Badge, PageHeader } from "../../components/ui"
-import { mockMembers, mockProjects, mockTasks } from "../../utils/mockData"
+import { Avatar, StatusBadge, PriorityDot, Badge, PageHeader, LoadingScreen } from "../../components/ui"
+import { useUsers } from "../../hooks/useUsers"
+import { useProjects } from "../../hooks/useProjects"
+import { useTasks } from "../../hooks/useTasks"
+import { useSessionUser } from "../../hooks/useSessionUser"
 
 export default function TeamView() {
-  const [currentUser, setCurrentUser] = useState(null)
-  const [loaded, setLoaded] = useState(false)
+  const { user: currentUser } = useSessionUser()
   const [selectedProject, setSelectedProject] = useState("")
+  const { users: userList, loading: usersLoading } = useUsers()
+  const { projects: projectList, loading: projectsLoading } = useProjects()
+  const { tasks: taskList, loading: tasksLoading } = useTasks()
 
-  useEffect(() => {
-    const stored = localStorage.getItem("teamsync_user")
-    if (!stored) {
-      window.location.href = "/login"
-      return
-    }
-    const user = JSON.parse(stored)
-    if (user.role === "admin" || user.role === "viewer") {
-      window.location.href = user.role === "admin" ? "/admin/dashboard" : "/dashboard"
-      return
-    }
-    setCurrentUser(user)
-    
-    const userProjects = mockProjects.filter(p => p.memberIds.includes(user.id))
-    if (userProjects.length > 0) {
-      setSelectedProject(userProjects[0].id)
-    }
-    setLoaded(true)
-  }, [])
+  if (!currentUser || usersLoading || projectsLoading || tasksLoading) {
+    return <LoadingScreen label="Loading team view..." />
+  }
 
-  if (!loaded || !currentUser) return <div style={{ padding: 40, textAlign: "center" }}>Loading...</div>
-
-  const myProjects = mockProjects.filter(p => p.memberIds.includes(currentUser.id))
-
-  const project = mockProjects.find(p => p.id === selectedProject)
-  const projectMembers = project ? project.memberIds.map(id => mockMembers.find(m => m.id === id)).filter(Boolean) : []
-  const projectTasks = mockTasks.filter(t => t.projectId === selectedProject)
-
-  const getUser = (id) => mockMembers.find(m => m.id === id)
-
-  const tasksByMember = projectMembers.map(member => ({
+  const myProjects = projectList.filter((project) => project.memberIds?.includes(currentUser.id))
+  const activeProjectId = selectedProject || myProjects[0]?.id || ""
+  const project = projectList.find((item) => item.id === activeProjectId)
+  const projectMembers = (project?.memberIds || []).map((id) => userList.find((user) => user.id === id)).filter(Boolean)
+  const projectTasks = taskList.filter((task) => task.projectId === activeProjectId)
+  const tasksByMember = projectMembers.map((member) => ({
     member,
-    tasks: projectTasks.filter(t => t.assignedTo === member.id),
+    tasks: projectTasks.filter((task) => task.assignedTo === member.id),
   }))
 
   return (
     <Layout role="member" user={{ name: currentUser.name, role: currentUser.role, color: currentUser.color }}>
-      <PageHeader
-        title="Team View"
-        subtitle="See everyone's tasks across your projects"
-      />
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title="Team View"
+          subtitle="See everyone's tasks across your projects"
+        />
 
-      {myProjects.length > 1 && (
-        <div style={{ display: "flex", gap: 8, marginBottom: 28, flexWrap: "wrap" }}>
-          {myProjects.map(p => (
-            <button
-              key={p.id}
-              onClick={() => setSelectedProject(p.id)}
-              style={{
-                padding: "7px 16px", borderRadius: 99, fontSize: 12, cursor: "pointer",
-                background: selectedProject === p.id ? "var(--accent)" : "var(--surface)",
-                color: selectedProject === p.id ? "#1e1d16" : "var(--muted)",
-                border: "1px solid",
-                borderColor: selectedProject === p.id ? "var(--accent)" : "rgba(153,151,124,0.2)",
-                fontWeight: selectedProject === p.id ? 500 : 400,
-                transition: "all 0.15s",
-              }}
-            >{p.name}</button>
-          ))}
-        </div>
-      )}
-
-      {project && (
-        <>
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 28, padding: "14px 18px", background: "var(--surface)", borderRadius: "var(--radius-lg)", border: "1px solid rgba(153,151,124,0.12)" }}>
-            <div>
-              <p style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{project.name}</p>
-              <p style={{ fontSize: 11, color: "var(--muted)", marginTop: 2 }}>{project.description}</p>
-            </div>
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8 }}>
-              <div style={{ display: "flex" }}>
-                {projectMembers.map(m => (
-                  <div key={m.id} style={{ marginRight: -6 }} title={m.name}>
-                    <Avatar name={m.name} color={m.color} size={28} />
-                  </div>
-                ))}
-              </div>
-              <span style={{ fontSize: 12, color: "var(--muted)", marginLeft: 12 }}>{projectMembers.length} members · {projectTasks.length} tasks</span>
-            </div>
+        {myProjects.length > 1 && (
+          <div className="flex flex-wrap gap-2">
+            {myProjects.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => setSelectedProject(item.id)}
+                className={`rounded-full border px-4 py-1.5 text-xs transition ${
+                  activeProjectId === item.id
+                    ? "border-accent bg-[linear-gradient(180deg,var(--color-accent-strong),var(--color-accent))] font-medium text-canvas"
+                    : "border-line/80 bg-white/[0.03] text-muted hover:text-copy"
+                }`}
+              >
+                {item.name}
+              </button>
+            ))}
           </div>
+        )}
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: 16 }}>
-            {tasksByMember.map(({ member, tasks }) => (
-              <div key={member.id} style={{
-                background: "var(--surface)",
-                borderRadius: "var(--radius-lg)",
-                border: `1px solid ${member.color}33`,
-                overflow: "hidden",
-              }}>
-                <div style={{
-                  padding: "14px 16px",
-                  background: `${member.color}18`,
-                  borderBottom: `1px solid ${member.color}22`,
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 10,
-                }}>
-                  <Avatar name={member.name} color={member.color} size={32} />
-                  <div>
-                    <p style={{ fontSize: 13, fontWeight: 600, color: "var(--text)" }}>{member.name}</p>
-                    <p style={{ fontSize: 10, color: "var(--muted)", textTransform: "capitalize" }}>{member.role}</p>
-                  </div>
-                  <div style={{ marginLeft: "auto" }}>
-                    <Badge label={`${tasks.length} task${tasks.length !== 1 ? "s" : ""}`} color="muted" />
-                  </div>
-                </div>
+        {project && (
+          <>
+            <div className="flex flex-wrap items-center gap-3 rounded-3xl border border-line/70 bg-[linear-gradient(180deg,rgba(63,54,45,0.92)_0%,rgba(53,45,37,0.92)_100%)] px-4 py-4 shadow-soft">
+              <div>
+                <p className="text-sm font-semibold text-copy">{project.name}</p>
+                <p className="mt-0.5 text-[11px] text-muted">{project.description}</p>
+              </div>
 
-                <div style={{ padding: "12px", display: "flex", flexDirection: "column", gap: 8 }}>
-                  {tasks.length === 0 && (
-                    <p style={{ fontSize: 12, color: "var(--faint)", textAlign: "center", padding: "16px 0" }}>No tasks assigned</p>
-                  )}
-                  {tasks.map(task => (
-                    <div key={task.id} style={{
-                      background: "var(--card)",
-                      borderRadius: "var(--radius-md)",
-                      padding: "10px 12px",
-                      border: "1px solid rgba(153,151,124,0.1)",
-                    }}>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 6 }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                          <PriorityDot priority={task.priority} />
-                          <p style={{ fontSize: 12, fontWeight: 500, color: "var(--text)" }}>{task.title}</p>
-                        </div>
-                      </div>
-                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <StatusBadge status={task.status} />
-                        {task.deadline && <span style={{ fontSize: 10, color: "var(--faint)" }}>Due {task.deadline}</span>}
-                      </div>
-                      {task.progressNote && (
-                        <div style={{
-                          marginTop: 8, padding: "5px 8px",
-                          background: `${member.color}12`,
-                          borderRadius: "var(--radius-sm)",
-                          borderLeft: `2px solid ${member.color}`,
-                        }}>
-                          <p style={{ fontSize: 10, color: member.color, fontStyle: "italic" }}>"{task.progressNote}"</p>
-                        </div>
-                      )}
+              <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
+                <div className="flex">
+                  {projectMembers.map((member) => (
+                    <div key={member.id} className="-mr-1.5" title={member.name}>
+                      <Avatar name={member.name} color={member.color} size={28} />
                     </div>
                   ))}
                 </div>
+                <span className="ml-3 text-sm text-muted">{projectMembers.length} members · {projectTasks.length} tasks</span>
               </div>
-            ))}
-          </div>
-        </>
-      )}
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {tasksByMember.map(({ member, tasks }) => (
+                <div key={member.id} className="overflow-hidden rounded-3xl border bg-surface/90" style={{ borderColor: `${member.color}33` }}>
+                  <div className="flex items-center gap-3 border-b px-4 py-3.5" style={{ backgroundColor: `${member.color}18`, borderBottomColor: `${member.color}22` }}>
+                    <Avatar name={member.name} color={member.color} size={32} />
+                    <div>
+                      <p className="text-sm font-semibold text-copy">{member.name}</p>
+                      <p className="text-[10px] capitalize text-muted">{member.role}</p>
+                    </div>
+                    <div className="ml-auto">
+                      <Badge label={`${tasks.length} task${tasks.length !== 1 ? "s" : ""}`} color="muted" />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2 p-3">
+                    {tasks.length === 0 && (
+                      <p className="py-4 text-center text-sm text-faint">No tasks assigned</p>
+                    )}
+
+                    {tasks.map((task) => (
+                      <div key={task.id} className="rounded-2xl border border-line/60 bg-panel/80 px-3 py-2.5">
+                        <div className="mb-1.5 flex items-start justify-between">
+                          <div className="flex items-center gap-1.5">
+                            <PriorityDot priority={task.priority} />
+                            <p className="text-sm font-medium text-copy">{task.title}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-center justify-between gap-2">
+                          <StatusBadge status={task.status} />
+                          {task.deadline && <span className="text-[10px] text-faint">Due {task.deadline}</span>}
+                        </div>
+                        {task.progressNote && (
+                          <div className="mt-2 rounded-xl border-l-2 px-2 py-1" style={{ backgroundColor: `${member.color}12`, borderLeftColor: member.color }}>
+                            <p className="text-[10px] italic" style={{ color: member.color }}>&quot;{task.progressNote}&quot;</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </Layout>
   )
 }
