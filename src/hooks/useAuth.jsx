@@ -2,7 +2,8 @@ import { useState, useEffect } from "react"
 import { 
   signInWithEmailAndPassword, 
   signOut,
-  onAuthStateChanged
+  onAuthStateChanged,
+  sendPasswordResetEmail
 } from "firebase/auth"
 import { doc, getDoc } from "firebase/firestore"
 import { auth, db } from "../firebase/firebase"
@@ -73,5 +74,16 @@ export function useAuth() {
     }
   }
 
-  return { user, loading, error, login, logout }
+  const resetPassword = async (email) => {
+    setError("")
+    try {
+      await sendPasswordResetEmail(auth, email)
+      return true
+    } catch (err) {
+      setError(err.message)
+      throw err
+    }
+  }
+
+  return { user, loading, error, login, logout, resetPassword }
 }
