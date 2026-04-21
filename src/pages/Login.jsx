@@ -32,7 +32,9 @@ export default function Login() {
     setMessage("")
     try {
       const user = await login(email, password)
-      if (user?.role === "admin") {
+      if (user?.mustChangePassword) {
+        navigate("/force-password-change")
+      } else if (user?.role === "admin") {
         navigate("/admin/dashboard")
       } else {
         navigate("/dashboard")

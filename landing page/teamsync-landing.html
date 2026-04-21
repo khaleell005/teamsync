@@ -1,0 +1,1221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TeamSync — Role-Based Team Task Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400;1,600&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --base: #1e1a15;
+    --surface: #2e2820;
+    --card: #3a342c;
+    --border: #5C5346;
+    --accent: #99977C;
+    --gold: #C9A84C;
+    --text: #F0ECE6;
+    --muted: #a89f94;
+    --faint: #6e6558;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--base);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 300;
+    overflow-x: hidden;
+    cursor: none;
+  }
+
+  /* Custom cursor */
+  .cursor {
+    position: fixed;
+    width: 10px; height: 10px;
+    background: var(--gold);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9999;
+    transform: translate(-50%, -50%);
+    transition: transform 0.1s, width 0.2s, height 0.2s, opacity 0.2s;
+    mix-blend-mode: screen;
+  }
+  .cursor-ring {
+    position: fixed;
+    width: 36px; height: 36px;
+    border: 1px solid rgba(153,151,124,0.5);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 9998;
+    transform: translate(-50%, -50%);
+    transition: transform 0.12s ease-out, width 0.2s, height 0.2s;
+  }
+
+  /* Noise overlay */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.4;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    z-index: 100;
+    padding: 20px 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid rgba(92,83,70,0.3);
+    background: rgba(30,26,21,0.85);
+    backdrop-filter: blur(16px);
+  }
+  .nav-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.02em;
+  }
+  .nav-logo span { color: var(--gold); }
+  .nav-links {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+    list-style: none;
+  }
+  .nav-links a {
+    font-size: 13px;
+    color: var(--muted);
+    text-decoration: none;
+    letter-spacing: 0.04em;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--text); }
+  .nav-cta {
+    padding: 9px 22px;
+    background: var(--accent);
+    color: #1a1710;
+    border: none;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: none;
+    transition: background 0.2s, transform 0.15s;
+    text-decoration: none;
+  }
+  .nav-cta:hover { background: var(--gold); transform: translateY(-1px); }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    position: relative;
+    padding: 120px 60px 80px;
+    overflow: hidden;
+  }
+
+  .hero-bg {
+    position: absolute;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 70% 50%, rgba(92,83,70,0.18) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 20% 80%, rgba(201,168,76,0.07) 0%, transparent 60%);
+  }
+
+  /* Geometric grid lines */
+  .hero-grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(92,83,70,0.08) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(92,83,70,0.08) 1px, transparent 1px);
+    background-size: 80px 80px;
+    mask-image: radial-gradient(ellipse 80% 80% at 50% 50%, black 0%, transparent 100%);
+  }
+
+  .hero-content {
+    position: relative;
+    z-index: 1;
+    max-width: 680px;
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.2s forwards;
+  }
+  .hero-eyebrow::before {
+    content: '';
+    display: block;
+    width: 28px; height: 1px;
+    background: var(--gold);
+  }
+
+  .hero-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(52px, 7vw, 88px);
+    font-weight: 700;
+    line-height: 1.0;
+    letter-spacing: -0.03em;
+    margin-bottom: 28px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.35s forwards;
+  }
+  .hero-title em {
+    font-style: italic;
+    color: var(--accent);
+  }
+
+  .hero-sub {
+    font-size: 16px;
+    font-weight: 300;
+    color: var(--muted);
+    line-height: 1.7;
+    max-width: 480px;
+    margin-bottom: 48px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.5s forwards;
+  }
+
+  .hero-actions {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    opacity: 0;
+    animation: fadeUp 0.8s 0.65s forwards;
+  }
+
+  .btn-primary {
+    padding: 14px 32px;
+    background: var(--accent);
+    color: #1a1710;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    font-family: 'DM Sans', sans-serif;
+    cursor: none;
+    transition: background 0.2s, transform 0.15s, box-shadow 0.2s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-primary:hover {
+    background: var(--gold);
+    transform: translateY(-2px);
+    box-shadow: 0 8px 32px rgba(201,168,76,0.2);
+  }
+
+  .btn-ghost {
+    padding: 14px 32px;
+    background: transparent;
+    color: var(--muted);
+    border: 1px solid rgba(92,83,70,0.5);
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 400;
+    font-family: 'DM Sans', sans-serif;
+    cursor: none;
+    transition: border-color 0.2s, color 0.2s, transform 0.15s;
+    text-decoration: none;
+    display: inline-block;
+  }
+  .btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--text);
+    transform: translateY(-2px);
+  }
+
+  /* Floating dashboard preview */
+  .hero-visual {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 560px;
+    opacity: 0;
+    animation: slideIn 1s 0.8s forwards;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(-46%) translateX(40px); }
+    to { opacity: 1; transform: translateY(-50%) translateX(0); }
+  }
+
+  .dashboard-mock {
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid rgba(92,83,70,0.4);
+    overflow: hidden;
+    box-shadow: 0 40px 120px rgba(0,0,0,0.6), 0 0 0 1px rgba(153,151,124,0.08);
+  }
+
+  .mock-topbar {
+    background: var(--card);
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border-bottom: 1px solid rgba(92,83,70,0.3);
+  }
+  .mock-dot { width: 10px; height: 10px; border-radius: 50%; }
+
+  .mock-body { display: flex; min-height: 320px; }
+
+  .mock-sidebar {
+    width: 140px;
+    background: rgba(30,26,21,0.6);
+    padding: 16px 12px;
+    border-right: 1px solid rgba(92,83,70,0.2);
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    flex-shrink: 0;
+  }
+
+  .mock-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    padding: 0 4px 12px;
+    margin-bottom: 4px;
+    border-bottom: 1px solid rgba(92,83,70,0.2);
+  }
+
+  .mock-nav-item {
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .mock-nav-item.active {
+    background: rgba(153,151,124,0.15);
+    color: var(--text);
+    border-left: 2px solid var(--accent);
+  }
+  .mock-nav-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--faint);
+    flex-shrink: 0;
+  }
+  .mock-nav-item.active .mock-nav-dot { background: var(--accent); }
+
+  .mock-main {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .mock-stats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .mock-stat {
+    background: rgba(30,26,21,0.5);
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid rgba(92,83,70,0.2);
+  }
+  .mock-stat-label { font-size: 9px; color: var(--faint); margin-bottom: 4px; letter-spacing: 0.06em; }
+  .mock-stat-val { font-size: 20px; font-weight: 600; font-family: 'Playfair Display', serif; color: var(--text); }
+  .mock-stat-val.gold { color: var(--gold); }
+  .mock-stat-val.green { color: #7CB87C; }
+
+  .mock-tasks { display: flex; flex-direction: column; gap: 6px; }
+  .mock-task {
+    background: rgba(30,26,21,0.5);
+    border-radius: 6px;
+    padding: 8px 10px;
+    border: 1px solid rgba(92,83,70,0.15);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mock-priority { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .mock-task-text { font-size: 10px; color: var(--text); flex: 1; }
+  .mock-task-sub { font-size: 9px; color: var(--faint); }
+  .mock-badge {
+    font-size: 9px;
+    padding: 2px 7px;
+    border-radius: 99px;
+    border: 1px solid;
+    white-space: nowrap;
+  }
+
+  .mock-team {
+    background: rgba(30,26,21,0.5);
+    border-radius: 8px;
+    padding: 10px;
+    border: 1px solid rgba(92,83,70,0.15);
+  }
+  .mock-team-label { font-size: 9px; color: var(--faint); margin-bottom: 8px; letter-spacing: 0.06em; }
+  .mock-avatars { display: flex; gap: 0; }
+  .mock-avatar {
+    width: 24px; height: 24px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 600;
+    margin-right: -6px;
+    border: 2px solid var(--surface);
+    color: #1a1710;
+  }
+
+  /* Scroll indicator */
+  .scroll-indicator {
+    position: absolute;
+    bottom: 40px;
+    left: 60px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    opacity: 0;
+    animation: fadeUp 0.8s 1.2s forwards;
+  }
+  .scroll-line {
+    width: 1px;
+    height: 48px;
+    background: linear-gradient(to bottom, var(--accent), transparent);
+  }
+  .scroll-text { font-size: 10px; color: var(--faint); letter-spacing: 0.12em; text-transform: uppercase; writing-mode: vertical-rl; }
+
+  /* SECTIONS */
+  section { position: relative; z-index: 1; }
+
+  /* PROBLEM STRIP */
+  .problem-strip {
+    padding: 80px 60px;
+    border-top: 1px solid rgba(92,83,70,0.2);
+    border-bottom: 1px solid rgba(92,83,70,0.2);
+    background: var(--surface);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .section-label {
+    font-size: 10px;
+    letter-spacing: 0.16em;
+    color: var(--gold);
+    text-transform: uppercase;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::before {
+    content: '';
+    width: 20px; height: 1px;
+    background: var(--gold);
+  }
+
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(32px, 4vw, 48px);
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 20px;
+  }
+  .section-title em { font-style: italic; color: var(--accent); }
+
+  .section-body {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.8;
+  }
+
+  .problem-points {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .problem-point {
+    display: flex;
+    gap: 16px;
+    padding: 20px;
+    background: var(--card);
+    border-radius: 10px;
+    border: 1px solid rgba(92,83,70,0.25);
+    transition: border-color 0.3s, transform 0.3s;
+  }
+  .problem-point:hover {
+    border-color: var(--accent);
+    transform: translateX(4px);
+  }
+
+  .problem-icon {
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    background: rgba(153,151,124,0.12);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .problem-point-title { font-size: 13px; font-weight: 500; color: var(--text); margin-bottom: 4px; }
+  .problem-point-desc { font-size: 12px; color: var(--faint); line-height: 1.6; }
+
+  /* FEATURES */
+  .features {
+    padding: 120px 60px;
+  }
+
+  .features-header {
+    text-align: center;
+    max-width: 560px;
+    margin: 0 auto 80px;
+  }
+
+  .features-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    border: 1px solid rgba(92,83,70,0.2);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .feature-card {
+    padding: 40px 32px;
+    background: var(--surface);
+    border: 1px solid rgba(92,83,70,0.15);
+    transition: background 0.3s;
+    position: relative;
+    overflow: hidden;
+  }
+  .feature-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(to right, transparent, var(--accent), transparent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .feature-card:hover { background: var(--card); }
+  .feature-card:hover::before { opacity: 1; }
+
+  .feature-number {
+    font-family: 'Playfair Display', serif;
+    font-size: 48px;
+    font-weight: 700;
+    color: rgba(92,83,70,0.3);
+    line-height: 1;
+    margin-bottom: 20px;
+  }
+
+  .feature-title {
+    font-size: 16px;
+    font-weight: 500;
+    color: var(--text);
+    margin-bottom: 12px;
+  }
+
+  .feature-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  /* ROLES */
+  .roles {
+    padding: 120px 60px;
+    background: var(--surface);
+    border-top: 1px solid rgba(92,83,70,0.2);
+  }
+
+  .roles-header {
+    max-width: 480px;
+    margin-bottom: 64px;
+  }
+
+  .roles-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .role-card {
+    background: var(--card);
+    border-radius: 12px;
+    border: 1px solid rgba(92,83,70,0.2);
+    overflow: hidden;
+    transition: transform 0.3s, box-shadow 0.3s;
+  }
+  .role-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+  }
+
+  .role-card-top {
+    padding: 28px 24px 20px;
+    border-bottom: 1px solid rgba(92,83,70,0.15);
+  }
+
+  .role-badge {
+    display: inline-block;
+    font-size: 10px;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 99px;
+    margin-bottom: 16px;
+  }
+
+  .role-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .role-desc {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .role-card-bottom {
+    padding: 16px 24px;
+  }
+
+  .role-perm {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    font-size: 11px;
+    color: var(--muted);
+    border-bottom: 1px solid rgba(92,83,70,0.08);
+  }
+  .role-perm:last-child { border-bottom: none; }
+  .perm-check { color: #7CB87C; font-size: 12px; }
+  .perm-cross { color: var(--faint); font-size: 12px; }
+
+  /* TEAM VIEW SECTION */
+  .team-view-section {
+    padding: 120px 60px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 80px;
+    align-items: center;
+  }
+
+  .team-mock {
+    background: var(--surface);
+    border-radius: 16px;
+    border: 1px solid rgba(92,83,70,0.3);
+    overflow: hidden;
+    box-shadow: 0 24px 80px rgba(0,0,0,0.4);
+  }
+
+  .team-mock-header {
+    padding: 14px 20px;
+    background: var(--card);
+    border-bottom: 1px solid rgba(92,83,70,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .team-mock-title { font-size: 12px; font-weight: 500; color: var(--text); }
+  .team-mock-sub { font-size: 10px; color: var(--faint); }
+
+  .team-cols {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0;
+  }
+
+  .team-col {
+    border-right: 1px solid rgba(92,83,70,0.15);
+    padding: 14px;
+  }
+  .team-col:last-child { border-right: none; }
+
+  .team-col-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(92,83,70,0.12);
+  }
+
+  .team-avatar {
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-weight: 600;
+    color: #1a1710;
+    flex-shrink: 0;
+  }
+
+  .team-member-name { font-size: 10px; font-weight: 500; color: var(--text); }
+  .team-member-role { font-size: 9px; color: var(--faint); }
+
+  .team-task-card {
+    background: rgba(30,26,21,0.6);
+    border-radius: 6px;
+    padding: 8px;
+    margin-bottom: 6px;
+    border-left: 2px solid;
+    border-top: 1px solid rgba(92,83,70,0.1);
+    border-right: 1px solid rgba(92,83,70,0.1);
+    border-bottom: 1px solid rgba(92,83,70,0.1);
+  }
+
+  .team-task-name { font-size: 9px; color: var(--text); margin-bottom: 4px; font-weight: 500; }
+  .team-task-status { font-size: 8px; color: var(--faint); }
+
+  /* CTA */
+  .cta-section {
+    padding: 120px 60px;
+    background: var(--surface);
+    border-top: 1px solid rgba(92,83,70,0.2);
+    text-align: center;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .cta-section::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse 60% 80% at 50% 50%, rgba(153,151,124,0.06) 0%, transparent 70%);
+  }
+
+  .cta-title {
+    font-family: 'Playfair Display', serif;
+    font-size: clamp(40px, 5vw, 72px);
+    font-weight: 700;
+    line-height: 1.05;
+    letter-spacing: -0.03em;
+    margin-bottom: 24px;
+    position: relative;
+  }
+  .cta-title em { font-style: italic; color: var(--accent); }
+
+  .cta-sub {
+    font-size: 16px;
+    color: var(--muted);
+    margin-bottom: 48px;
+    max-width: 480px;
+    margin-left: auto;
+    margin-right: auto;
+    line-height: 1.7;
+    position: relative;
+  }
+
+  .cta-actions {
+    display: flex;
+    justify-content: center;
+    gap: 16px;
+    position: relative;
+  }
+
+  /* FOOTER */
+  footer {
+    padding: 40px 60px;
+    border-top: 1px solid rgba(92,83,70,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .footer-logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .footer-logo span { color: var(--gold); }
+
+  .footer-copy { font-size: 12px; color: var(--faint); }
+
+  .footer-links { display: flex; gap: 24px; }
+  .footer-links a { font-size: 12px; color: var(--faint); text-decoration: none; transition: color 0.2s; }
+  .footer-links a:hover { color: var(--accent); }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(24px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .reveal {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: opacity 0.7s ease, transform 0.7s ease;
+  }
+  .reveal.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .reveal-delay-1 { transition-delay: 0.1s; }
+  .reveal-delay-2 { transition-delay: 0.2s; }
+  .reveal-delay-3 { transition-delay: 0.3s; }
+  .reveal-delay-4 { transition-delay: 0.4s; }
+</style>
+</head>
+<body>
+
+<div class="cursor" id="cursor"></div>
+<div class="cursor-ring" id="cursorRing"></div>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-logo">Team<span>Sync</span></div>
+  <ul class="nav-links">
+    <li><a href="#features">Features</a></li>
+    <li><a href="#roles">Roles</a></li>
+    <li><a href="#team-view">Team View</a></li>
+  </ul>
+  <a href="#" class="nav-cta">Get Started</a>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-grid"></div>
+
+  <div class="hero-content">
+    <div class="hero-eyebrow">Role-based team workspace</div>
+    <h1 class="hero-title">
+      Your team,<br>
+      <em>perfectly</em><br>
+      in sync.
+    </h1>
+    <p class="hero-sub">
+      TeamSync gives every team member exactly what they need — no more, no less. Assign tasks, track progress, and see your team move in real time.
+    </p>
+    <div class="hero-actions">
+      <a href="#" class="btn-primary">Start for free</a>
+      <a href="#features" class="btn-ghost">See how it works</a>
+    </div>
+  </div>
+
+  <!-- Dashboard Preview -->
+  <div class="hero-visual">
+    <div class="dashboard-mock">
+      <div class="mock-topbar">
+        <div class="mock-dot" style="background:#C9714C"></div>
+        <div class="mock-dot" style="background:#C9A84C"></div>
+        <div class="mock-dot" style="background:#7CB87C"></div>
+        <span style="font-size:10px;color:var(--faint);margin-left:8px">teamsync-ng.vercel.app</span>
+      </div>
+      <div class="mock-body">
+        <div class="mock-sidebar">
+          <div class="mock-logo">TeamSync</div>
+          <div class="mock-nav-item active"><div class="mock-nav-dot"></div>Overview</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div>Members</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div>Projects</div>
+          <div class="mock-nav-item"><div class="mock-nav-dot"></div>Tasks</div>
+          <div style="margin-top:auto;padding-top:12px;border-top:1px solid rgba(92,83,70,0.2)">
+            <div style="display:flex;align-items:center;gap:6px">
+              <div style="width:22px;height:22px;border-radius:50%;background:#99977C;display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:600;color:#1a1710">AI</div>
+              <div>
+                <div style="font-size:9px;color:var(--text)">Admin</div>
+                <div style="font-size:8px;color:var(--faint)">admin</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="mock-main">
+          <div class="mock-stats">
+            <div class="mock-stat">
+              <div class="mock-stat-label">MEMBERS</div>
+              <div class="mock-stat-val">5</div>
+            </div>
+            <div class="mock-stat">
+              <div class="mock-stat-label">TASKS</div>
+              <div class="mock-stat-val gold">18</div>
+            </div>
+            <div class="mock-stat">
+              <div class="mock-stat-label">DONE</div>
+              <div class="mock-stat-val green">6</div>
+            </div>
+          </div>
+          <div class="mock-tasks">
+            <div class="mock-task">
+              <div class="mock-priority" style="background:#C9714C"></div>
+              <div style="flex:1">
+                <div class="mock-task-text">Redesign landing page</div>
+                <div class="mock-task-sub">NexaFlow Rebrand</div>
+              </div>
+              <div class="mock-badge" style="color:#99977C;border-color:rgba(153,151,124,0.3);background:rgba(153,151,124,0.08)">In progress</div>
+            </div>
+            <div class="mock-task">
+              <div class="mock-priority" style="background:#C9A84C"></div>
+              <div style="flex:1">
+                <div class="mock-task-text">Setup CI/CD pipeline</div>
+                <div class="mock-task-sub">Backend Sprint Q2</div>
+              </div>
+              <div class="mock-badge" style="color:#a89f94;border-color:rgba(168,159,148,0.3);background:rgba(168,159,148,0.08)">Not started</div>
+            </div>
+            <div class="mock-task">
+              <div class="mock-priority" style="background:#7CB87C"></div>
+              <div style="flex:1">
+                <div class="mock-task-text">Create logo variations</div>
+                <div class="mock-task-sub">NexaFlow Rebrand</div>
+              </div>
+              <div class="mock-badge" style="color:#7CB87C;border-color:rgba(124,184,124,0.3);background:rgba(124,184,124,0.08)">Completed</div>
+            </div>
+          </div>
+          <div class="mock-team">
+            <div class="mock-team-label">TEAM</div>
+            <div class="mock-avatars">
+              <div class="mock-avatar" style="background:#99977C">KA</div>
+              <div class="mock-avatar" style="background:#7EB8C9">TM</div>
+              <div class="mock-avatar" style="background:#C97E8A">AO</div>
+              <div class="mock-avatar" style="background:#85C98A">RB</div>
+              <div class="mock-avatar" style="background:#C9A84C">NE</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="scroll-indicator">
+    <div class="scroll-line"></div>
+    <div class="scroll-text">Scroll</div>
+  </div>
+</section>
+
+<!-- PROBLEM -->
+<section class="problem-strip" id="features">
+  <div class="reveal">
+    <div class="section-label">The problem</div>
+    <h2 class="section-title">Work gets lost in<br><em>the noise.</em></h2>
+    <p class="section-body">Tasks assigned over messages. Progress tracked in spreadsheets. Nobody knows what's overdue until it's too late. TeamSync fixes that.</p>
+  </div>
+  <div class="problem-points reveal reveal-delay-1">
+    <div class="problem-point">
+      <div class="problem-icon">📋</div>
+      <div>
+        <div class="problem-point-title">No single source of truth</div>
+        <div class="problem-point-desc">Tasks scattered across chats, emails, and docs — impossible to track at a glance.</div>
+      </div>
+    </div>
+    <div class="problem-point">
+      <div class="problem-icon">👁</div>
+      <div>
+        <div class="problem-point-title">Zero visibility</div>
+        <div class="problem-point-desc">Managers can't see who's blocked, overloaded, or waiting on someone else.</div>
+      </div>
+    </div>
+    <div class="problem-point">
+      <div class="problem-icon">🔀</div>
+      <div>
+        <div class="problem-point-title">Unclear ownership</div>
+        <div class="problem-point-desc">When everyone owns a task, nobody does. TeamSync makes ownership explicit.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="features-header reveal">
+    <div class="section-label">What you get</div>
+    <h2 class="section-title">Built for teams that<br><em>move fast.</em></h2>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card reveal">
+      <div class="feature-number">01</div>
+      <div class="feature-title">Admin Control</div>
+      <div class="feature-desc">Create member accounts, set up projects, and assign tasks — all from one dashboard. You decide who sees what.</div>
+    </div>
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-number">02</div>
+      <div class="feature-title">Personal Workspaces</div>
+      <div class="feature-desc">Each member sees only their assigned projects and tasks. No clutter, no distraction — just the work that matters to them.</div>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-number">03</div>
+      <div class="feature-title">Real-Time Progress</div>
+      <div class="feature-desc">Members update their task status and leave a progress note. Changes appear instantly for everyone on the team.</div>
+    </div>
+    <div class="feature-card reveal reveal-delay-3">
+      <div class="feature-number">04</div>
+      <div class="feature-title">Color-Coded Team View</div>
+      <div class="feature-desc">A shared board where every member's work is visible — each person identified by their own color.</div>
+    </div>
+    <div class="feature-card reveal reveal-delay-1">
+      <div class="feature-number">05</div>
+      <div class="feature-title">Project Leads</div>
+      <div class="feature-desc">Assign leads to oversee specific projects. They can reassign tasks and monitor progress without admin-level access.</div>
+    </div>
+    <div class="feature-card reveal reveal-delay-2">
+      <div class="feature-number">06</div>
+      <div class="feature-title">Role-Based Access</div>
+      <div class="feature-desc">Four roles — Admin, Project Lead, Member, Viewer. Each with exactly the right level of access, nothing more.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ROLES -->
+<section class="roles" id="roles">
+  <div class="roles-header reveal">
+    <div class="section-label">User roles</div>
+    <h2 class="section-title">The right access<br>for <em>everyone.</em></h2>
+    <p class="section-body" style="margin-top:16px">Four roles, one workspace. Every person sees exactly what they need.</p>
+  </div>
+  <div class="roles-grid">
+    <div class="role-card reveal">
+      <div class="role-card-top">
+        <div class="role-badge" style="background:rgba(201,168,76,0.15);color:var(--gold);border:1px solid rgba(201,168,76,0.3)">Admin</div>
+        <div class="role-name">Admin</div>
+        <div class="role-desc">Full control. Creates the workspace, manages all members, projects, and tasks.</div>
+      </div>
+      <div class="role-card-bottom">
+        <div class="role-perm"><span class="perm-check">✓</span> Create members</div>
+        <div class="role-perm"><span class="perm-check">✓</span> Create projects</div>
+        <div class="role-perm"><span class="perm-check">✓</span> Assign tasks</div>
+        <div class="role-perm"><span class="perm-check">✓</span> Full visibility</div>
+      </div>
+    </div>
+    <div class="role-card reveal reveal-delay-1">
+      <div class="role-card-top">
+        <div class="role-badge" style="background:rgba(153,151,124,0.15);color:var(--accent);border:1px solid rgba(153,151,124,0.3)">Lead</div>
+        <div class="role-name">Project Lead</div>
+        <div class="role-desc">Oversees assigned projects. Reassigns tasks and tracks member progress.</div>
+      </div>
+      <div class="role-card-bottom">
+        <div class="role-perm"><span class="perm-cross">✗</span> Create members</div>
+        <div class="role-perm"><span class="perm-check">✓</span> Reassign tasks</div>
+        <div class="role-perm"><span class="perm-check">✓</span> Monitor progress</div>
+        <div class="role-perm"><span class="perm-check">✓</span> View team board</div>
+      </div>
+    </div>
+    <div class="role-card reveal reveal-delay-2">
+      <div class="role-card-top">
+        <div class="role-badge" style="background:rgba(124,184,124,0.12);color:#7CB87C;border:1px solid rgba(124,184,124,0.25)">Member</div>
+        <div class="role-name">Member</div>
+        <div class="role-desc">Focused on their work. Sees and updates only their assigned tasks.</div>
+      </div>
+      <div class="role-card-bottom">
+        <div class="role-perm"><span class="perm-cross">✗</span> Create projects</div>
+        <div class="role-perm"><span class="perm-cross">✗</span> Assign tasks</div>
+        <div class="role-perm"><span class="perm-check">✓</span> Update own tasks</div>
+        <div class="role-perm"><span class="perm-check">✓</span> View team board</div>
+      </div>
+    </div>
+    <div class="role-card reveal reveal-delay-3">
+      <div class="role-card-top">
+        <div class="role-badge" style="background:rgba(110,101,88,0.2);color:var(--faint);border:1px solid rgba(110,101,88,0.3)">Viewer</div>
+        <div class="role-name">Viewer</div>
+        <div class="role-desc">Read-only access. Observes progress without making any changes.</div>
+      </div>
+      <div class="role-card-bottom">
+        <div class="role-perm"><span class="perm-cross">✗</span> Create anything</div>
+        <div class="role-perm"><span class="perm-cross">✗</span> Update tasks</div>
+        <div class="role-perm"><span class="perm-check">✓</span> View projects</div>
+        <div class="role-perm"><span class="perm-check">✓</span> View team board</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- TEAM VIEW -->
+<section class="team-view-section" id="team-view">
+  <div class="team-mock reveal">
+    <div class="team-mock-header">
+      <div>
+        <div class="team-mock-title">Team View — NexaFlow Rebrand</div>
+        <div class="team-mock-sub">3 members · 6 tasks · Live updates</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <div style="width:8px;height:8px;border-radius:50%;background:#7CB87C"></div>
+        <span style="font-size:9px;color:var(--faint)">Live</span>
+      </div>
+    </div>
+    <div class="team-cols">
+      <div class="team-col">
+        <div class="team-col-header">
+          <div class="team-avatar" style="background:#7EB8C9">TM</div>
+          <div>
+            <div class="team-member-name">Tunde Musa</div>
+            <div class="team-member-role">Member</div>
+          </div>
+        </div>
+        <div class="team-task-card" style="border-left-color:#7EB8C9">
+          <div class="team-task-name">Redesign landing page</div>
+          <div class="team-task-status" style="color:#99977C">In progress</div>
+        </div>
+        <div class="team-task-card" style="border-left-color:#7EB8C9">
+          <div class="team-task-name">SEO audit</div>
+          <div class="team-task-status" style="color:#7CB87C">Completed</div>
+        </div>
+      </div>
+      <div class="team-col">
+        <div class="team-col-header">
+          <div class="team-avatar" style="background:#C97E8A">AO</div>
+          <div>
+            <div class="team-member-name">Aisha Okonkwo</div>
+            <div class="team-member-role">Project Lead</div>
+          </div>
+        </div>
+        <div class="team-task-card" style="border-left-color:#C97E8A">
+          <div class="team-task-name">Logo variations</div>
+          <div class="team-task-status" style="color:#7CB87C">Completed</div>
+        </div>
+        <div class="team-task-card" style="border-left-color:#C97E8A">
+          <div class="team-task-name">Brand guidelines</div>
+          <div class="team-task-status" style="color:#99977C">In progress</div>
+        </div>
+      </div>
+      <div class="team-col">
+        <div class="team-col-header">
+          <div class="team-avatar" style="background:#85C98A">RB</div>
+          <div>
+            <div class="team-member-name">Rasheed Bello</div>
+            <div class="team-member-role">Member</div>
+          </div>
+        </div>
+        <div class="team-task-card" style="border-left-color:#85C98A">
+          <div class="team-task-name">Component library</div>
+          <div class="team-task-status" style="color:#a89f94">Not started</div>
+        </div>
+        <div class="team-task-card" style="border-left-color:#85C98A">
+          <div class="team-task-name">Dark mode styles</div>
+          <div class="team-task-status" style="color:#99977C">In progress</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="reveal reveal-delay-1">
+    <div class="section-label">Team view</div>
+    <h2 class="section-title">See everyone,<br><em>at once.</em></h2>
+    <p class="section-body" style="margin-top:16px;margin-bottom:32px">
+      The team board shows every member's tasks side by side — color-coded so you know at a glance who owns what. No more asking for updates.
+    </p>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border-radius:8px;border:1px solid rgba(92,83,70,0.2)">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0"></div>
+        <span style="font-size:13px;color:var(--muted)">Color-coded per team member</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border-radius:8px;border:1px solid rgba(92,83,70,0.2)">
+        <div style="width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0"></div>
+        <span style="font-size:13px;color:var(--muted)">Live updates — no refresh needed</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--surface);border-radius:8px;border:1px solid rgba(92,83,70,0.2)">
+        <div style="width:8px;height:8px;border-radius:50%;background:#7CB87C;flex-shrink:0"></div>
+        <span style="font-size:13px;color:var(--muted)">Filter by project</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+  <h2 class="cta-title reveal">Ready to get your<br>team <em>in sync?</em></h2>
+  <p class="cta-sub reveal reveal-delay-1">Set up your workspace in minutes. No complicated onboarding — just sign in and start assigning work.</p>
+  <div class="cta-actions reveal reveal-delay-2">
+    <a href="#" class="btn-primary">Get started free</a>
+    <a href="#" class="btn-ghost">View demo</a>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-logo">Team<span>Sync</span></div>
+  <div class="footer-copy">© 2025 TeamSync. Built by Abubakar Ibrahim Ibrahim.</div>
+  <div class="footer-links">
+    <a href="#">Privacy</a>
+    <a href="#">Terms</a>
+    <a href="#">Contact</a>
+  </div>
+</footer>
+
+<script>
+  // Custom cursor
+  const cursor = document.getElementById('cursor');
+  const ring = document.getElementById('cursorRing');
+  let mx = 0, my = 0, rx = 0, ry = 0;
+
+  document.addEventListener('mousemove', e => {
+    mx = e.clientX; my = e.clientY;
+    cursor.style.left = mx + 'px';
+    cursor.style.top = my + 'px';
+  });
+
+  const lerp = (a, b, n) => a + (b - a) * n;
+  const animate = () => {
+    rx = lerp(rx, mx, 0.12);
+    ry = lerp(ry, my, 0.12);
+    ring.style.left = rx + 'px';
+    ring.style.top = ry + 'px';
+    requestAnimationFrame(animate);
+  };
+  animate();
+
+  document.querySelectorAll('a, button').forEach(el => {
+    el.addEventListener('mouseenter', () => {
+      cursor.style.width = '18px';
+      cursor.style.height = '18px';
+      ring.style.width = '52px';
+      ring.style.height = '52px';
+    });
+    el.addEventListener('mouseleave', () => {
+      cursor.style.width = '10px';
+      cursor.style.height = '10px';
+      ring.style.width = '36px';
+      ring.style.height = '36px';
+    });
+  });
+
+  // Scroll reveal
+  const revealEls = document.querySelectorAll('.reveal');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add('visible');
+      }
+    });
+  }, { threshold: 0.12 });
+
+  revealEls.forEach(el => observer.observe(el));
+
+  // Nav shrink on scroll
+  const nav = document.querySelector('nav');
+  window.addEventListener('scroll', () => {
+    if (window.scrollY > 60) {
+      nav.style.padding = '14px 60px';
+    } else {
+      nav.style.padding = '20px 60px';
+    }
+  });
+</script>
+</body>
+</html>

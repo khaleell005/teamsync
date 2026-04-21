@@ -12,7 +12,7 @@ export function createDefaultMemberForm() {
   return {
     name: "",
     email: "",
-    password: "",
+    password: "pass123",
     role: "member",
     color: DEFAULT_MEMBER_COLORS[0],
   }

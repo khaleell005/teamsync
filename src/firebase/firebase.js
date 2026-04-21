@@ -1,5 +1,5 @@
 import { deleteApp, getApp, getApps, initializeApp } from "firebase/app"
-import { getAuth, signOut } from "firebase/auth"
+import { getAuth, signOut, deleteUser as deleteAuthUser, reauthenticateWithCredential } from "firebase/auth"
 import { getFirestore } from "firebase/firestore"
 
 const REQUIRED_FIREBASE_ENV_KEYS = [

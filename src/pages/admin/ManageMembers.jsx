@@ -17,6 +17,7 @@ export default function ManageMembers() {
     form: createDefaultMemberForm(),
     saving: false,
     error: "",
+    editingId: null,
   })
 
   if (!adminUser || loading) {
@@ -34,7 +35,26 @@ export default function ManageMembers() {
     )
 
   const memberTableColumns = "grid-cols-[minmax(220px,2.1fr)_minmax(280px,2.4fr)_minmax(140px,1fr)_minmax(140px,1fr)_minmax(170px,1.3fr)]"
-  const closeForm = () => updateState({ showForm: false, error: "", form: createDefaultMemberForm(), saving: false })
+  const closeForm = () => updateState({ showForm: false, error: "", form: createDefaultMemberForm(), saving: false, editingId: null })
+
+  const handleEditRole = async (userId, newRole, createdBy) => {
+    try {
+      if (newRole === "admin") {
+        await updateUser(userId, { role: newRole, createdBy: adminUser.id })
+      } else {
+        await updateUser(userId, { role: newRole })
+      }
+    } catch (err) {
+      console.error("Failed to update role:", err)
+    }
+  }
+
+  const canEditRole = (member) => {
+    if (member.role === "admin") {
+      return member.createdBy === adminUser.id
+    }
+    return true
+  }
 
   const handleAdd = async () => {
     if (!form.name || !form.email || !form.password) {
@@ -49,14 +69,21 @@ export default function ManageMembers() {
         createUserWithEmailAndPassword(secondaryAuth, form.email, form.password),
       )
       
-      await setDoc(doc(db, "users", authResult.user.uid), {
+      const userData = {
         name: form.name,
         email: form.email,
         role: form.role,
         color: form.color,
+        mustChangePassword: true,
         createdAt: formatDisplayDate(),
         createdAtTimestamp: serverTimestamp(),
-      })
+      }
+
+      if (form.role === "admin") {
+        userData.createdBy = adminUser.id
+      }
+
+      await setDoc(doc(db, "users", authResult.user.uid), userData)
 
       updateState({
         form: createDefaultMemberForm(),
@@ -70,6 +97,25 @@ export default function ManageMembers() {
           : "Failed to create account. Please try again.",
         saving: false 
       })
+    }
+  }
+
+  const canRemove = (member) => {
+    if (member.id === adminUser.id) return false
+    if (member.role !== "admin") return true
+    return member.createdBy === adminUser.id
+  }
+
+  const handleRemove = async (userId, userEmail) => {
+    if (!confirm(`Are you sure you want to remove ${userEmail}? They won't be able to sign in again.`)) {
+      return
+    }
+
+    try {
+      await remove(userId)
+    } catch (err) {
+      console.error("Failed to remove member:", err)
+      alert(`Failed to remove member: ${err.message}`)
     }
   }
 
@@ -103,6 +149,7 @@ export default function ManageMembers() {
                     { value: "member", label: "Member" },
                     { value: "PL", label: "Project Lead" },
                     { value: "viewer", label: "Viewer" },
+                    { value: "admin", label: "Admin" },
                   ]}
                 />
               </div>
@@ -174,15 +221,30 @@ export default function ManageMembers() {
                   </div>
                   <p className="truncate pr-4 text-sm text-muted">{member.email}</p>
                   <div>
-                    <Badge
-                      label={member.role}
-                      color={member.role === "admin" ? "gold" : member.role === "PL" ? "blue" : member.role === "member" ? "accent" : "muted"}
-                    />
+                    {member.role === "admin" ? (
+                      <Badge label="Admin" color="gold" />
+                    ) : canEditRole(member) ? (
+                      <select
+                        value={member.role}
+                        onChange={(e) => handleEditRole(member.id, e.target.value, member.createdBy)}
+                        className="cursor-pointer rounded-lg border border-line/80 bg-black/15 px-2 py-1 text-xs text-copy transition focus:border-accent/70"
+                      >
+                        <option value="member">Member</option>
+                        <option value="PL">Project Lead</option>
+                        <option value="viewer">Viewer</option>
+                        <option value="admin">Admin</option>
+                      </select>
+                    ) : (
+                      <Badge
+                        label={member.role}
+                        color={member.role === "PL" ? "blue" : member.role === "member" ? "accent" : "muted"}
+                      />
+                    )}
                   </div>
                   <p className="text-sm text-muted">{member.createdAt}</p>
                   <div className="flex justify-end">
-                    {member.role !== "admin" && (
-                      <Btn variant="danger" size="sm" onClick={() => remove(member.id)}>Remove</Btn>
+                    {canRemove(member) && (
+                      <Btn variant="danger" size="sm" onClick={() => handleRemove(member.id, member.email)}>Remove</Btn>
                     )}
                   </div>
                 </div>

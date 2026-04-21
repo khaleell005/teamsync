@@ -118,7 +118,7 @@ export function useCollection(collectionName) {
     try {
       setError("")
       const docRef = doc(db, collectionName, id)
-      await deleteDoc(docRef)
+      await updateDoc(docRef, { removed: true, removedAt: serverTimestamp() })
       setDocuments((previousDocuments) => previousDocuments.filter((item) => item.id !== id))
     } catch (err) {
       setError(err.message)
@@ -134,7 +134,8 @@ export function useCollection(collectionName) {
     const unsubscribe = onSnapshot(
       collectionRef,
       (snapshot) => {
-        setDocuments(sortDocuments(mapSnapshot(snapshot)))
+        const docs = mapSnapshot(snapshot).filter(doc => !doc.removed)
+        setDocuments(sortDocuments(docs))
         setLoading(false)
       },
       (err) => {

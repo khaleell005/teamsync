@@ -1,8 +1,9 @@
 import { useState } from "react"
 import Layout from "../../components/layout/Layout"
-import { Card, StatusBadge, PriorityDot, Btn, Select, TextArea, PageHeader, Divider, EmptyState, LoadingScreen } from "../../components/ui"
+import { Card, Avatar, StatusBadge, PriorityDot, Btn, Input, Select, TextArea, PageHeader, Divider, EmptyState, LoadingScreen } from "../../components/ui"
 import { useProjects } from "../../hooks/useProjects"
 import { useTasks } from "../../hooks/useTasks"
+import { useUsers } from "../../hooks/useUsers"
 import { useSessionUser } from "../../hooks/useSessionUser"
 
 export default function MyTasks() {
@@ -10,27 +11,53 @@ export default function MyTasks() {
   const [editingId, setEditingId] = useState(null)
   const [noteInput, setNoteInput] = useState("")
   const [statusInput, setStatusInput] = useState("")
+  const [assignMode, setAssignMode] = useState(null)
+  const [assignTo, setAssignTo] = useState("")
   const { projects: projectList, loading: projectsLoading } = useProjects()
   const { tasks: taskList, update: updateTask, loading: tasksLoading } = useTasks()
+  const { users: userList, loading: usersLoading } = useUsers()
 
-  if (!currentUser || projectsLoading || tasksLoading) {
+  if (!currentUser || projectsLoading || tasksLoading || usersLoading) {
     return <LoadingScreen label="Loading tasks..." />
   }
 
+  const isPL = currentUser.role === "PL"
   const isViewer = currentUser.role === "viewer"
-  const tasks = isViewer
-    ? taskList.filter((task) => {
-        const project = projectList.find((item) => item.id === task.projectId)
-        return project?.memberIds?.includes(currentUser.id)
-      })
-    : taskList.filter((task) => task.assignedTo === currentUser.id)
+  const isAdmin = currentUser.role === "admin"
+
+  const myProjects = projectList.filter((project) => project.leadId === currentUser.id)
+  const myProjectIds = myProjects.map((p) => p.id)
+
+  let tasks
+  if (isPL) {
+    tasks = taskList.filter((task) => myProjectIds.includes(task.projectId))
+  } else if (isViewer) {
+    tasks = taskList.filter((task) => {
+      const project = projectList.find((item) => item.id === task.projectId)
+      return project?.memberIds?.includes(currentUser.id)
+    })
+  } else {
+    tasks = taskList.filter((task) => task.assignedTo === currentUser.id)
+  }
 
   const getProject = (id) => projectList.find((project) => project.id === id)
+  const getUser = (id) => userList.find((user) => user.id === id)
+
+  const getProjectMembers = (projectId) => {
+    const project = projectList.find((p) => p.id === projectId)
+    if (!project) return []
+    return userList.filter((user) => project.memberIds?.includes(user.id))
+  }
 
   const openEdit = (task) => {
     setEditingId(task.id)
     setNoteInput(task.progressNote || "")
     setStatusInput(task.status)
+  }
+
+  const openAssign = (task) => {
+    setAssignMode(task.id)
+    setAssignTo(task.assignedTo || "")
   }
 
   const saveUpdate = async (id) => {
@@ -39,6 +66,12 @@ export default function MyTasks() {
       await updateTask(id, { ...task, status: statusInput, progressNote: noteInput })
     }
     setEditingId(null)
+  }
+
+  const saveAssign = async (taskId) => {
+    await updateTask(taskId, { assignedTo: assignTo || null })
+    setAssignMode(null)
+    setAssignTo("")
   }
 
   const handleTaskUpdateSubmit = async (event, taskId) => {
@@ -52,6 +85,14 @@ export default function MyTasks() {
     { value: "completed", label: "Completed" },
   ]
 
+  const memberOptions = [
+    { value: "", label: "Unassigned" },
+    ...getProjectMembers(assignMode ? taskList.find((t) => t.id === assignMode)?.projectId : "").map((user) => ({
+      value: user.id,
+      label: user.name,
+    })),
+  ]
+
   const priorityOrder = { high: 0, medium: 1, low: 2 }
   const sorted = [...tasks].sort((first, second) => priorityOrder[first.priority] - priorityOrder[second.priority])
 
@@ -59,16 +100,19 @@ export default function MyTasks() {
     <Layout role="member" user={{ name: currentUser.name, role: currentUser.role, color: currentUser.color }}>
       <div className="flex flex-col gap-6">
         <PageHeader
-          title={isViewer ? "Project Tasks" : "My Tasks"}
-          subtitle={isViewer ? `${tasks.length} tasks in your projects` : `${tasks.length} tasks assigned to you`}
+          title={isPL ? "Project Tasks" : isViewer ? "Project Tasks" : "My Tasks"}
+          subtitle={`${tasks.length} ${isPL ? "tasks in your projects" : isViewer ? "tasks in your projects" : "tasks assigned to you"}`}
         />
 
         <div className="flex flex-col gap-3.5">
-          {sorted.length === 0 && <EmptyState message="No tasks assigned yet." />}
+          {sorted.length === 0 && <EmptyState message="No tasks found." />}
 
           {sorted.map((task) => {
             const isEditing = editingId === task.id
+            const isAssigning = assignMode === task.id
             const project = getProject(task.projectId)
+            const assignee = getUser(task.assignedTo)
+            const members = getProjectMembers(task.projectId)
 
             return (
               <Card key={task.id} className="px-5 py-[18px]">
@@ -87,6 +131,7 @@ export default function MyTasks() {
                   <span>Project: <span className="text-muted">{project?.name || "—"}</span></span>
                   {task.deadline && <span>Due: <span className="text-muted">{task.deadline}</span></span>}
                   <span className="capitalize">Priority: <span className="text-muted">{task.priority}</span></span>
+                  <span>Assigned: <span className="text-muted">{assignee?.name || "—"}</span></span>
                 </div>
 
                 {!isEditing && task.progressNote && (
@@ -95,7 +140,24 @@ export default function MyTasks() {
                   </div>
                 )}
 
-                {isEditing ? (
+                {isAssigning ? (
+                  <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); saveAssign(task.id) }}>
+                    <Divider />
+                    <Select
+                      label="Assign to"
+                      value={assignTo}
+                      onChange={(e) => setAssignTo(e.target.value)}
+                      options={[
+                        { value: "", label: "Unassigned" },
+                        ...members.map((user) => ({ value: user.id, label: user.name })),
+                      ]}
+                    />
+                    <div className="flex gap-2">
+                      <Btn type="submit">Save</Btn>
+                      <Btn type="button" variant="ghost" onClick={() => setAssignMode(null)}>Cancel</Btn>
+                    </div>
+                  </form>
+                ) : isEditing ? (
                   <form className="flex flex-col gap-3" onSubmit={(event) => handleTaskUpdateSubmit(event, task.id)}>
                     <Divider />
                     <Select
@@ -116,10 +178,19 @@ export default function MyTasks() {
                       <Btn type="button" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Btn>
                     </div>
                   </form>
-                ) : !isViewer && (
-                  <Btn variant="ghost" size="sm" onClick={() => openEdit(task)}>
-                    Update progress
-                  </Btn>
+                ) : (
+                  <div className="flex gap-2">
+                    {!isViewer && (
+                      <Btn variant="ghost" size="sm" onClick={() => openEdit(task)}>
+                        Update progress
+                      </Btn>
+                    )}
+                    {isPL && (
+                      <Btn variant="ghost" size="sm" onClick={() => openAssign(task)}>
+                        Reassign
+                      </Btn>
+                    )}
+                  </div>
                 )}
               </Card>
             )

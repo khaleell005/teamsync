@@ -1,5 +1,6 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom"
 import Login from "./pages/Login"
+import ForcePasswordChange from "./pages/ForcePasswordChange"
 import Profile from "./pages/Profile"
 import AdminDashboard from "./pages/admin/AdminDashboard"
 import ManageMembers from "./pages/admin/ManageMembers"
@@ -15,6 +16,7 @@ export default function App() {
     <BrowserRouter>
       <Routes>
         <Route path="/login" element={<Login />} />
+        <Route path="/force-password-change" element={<ForcePasswordChange />} />
         <Route element={<ProtectedRoute />}>
           <Route path="/profile" element={<Profile />} />
         </Route>

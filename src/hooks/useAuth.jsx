@@ -48,7 +48,12 @@ export function useAuth() {
       const userDoc = await getDoc(doc(db, "users", result.user.uid))
       let userData
       if (userDoc.exists()) {
-        userData = normalizeUser({ uid: result.user.uid, ...userDoc.data() })
+        const data = userDoc.data()
+        if (data.removed) {
+          await signOut(auth)
+          throw new Error("Account has been removed")
+        }
+        userData = normalizeUser({ uid: result.user.uid, ...data })
       } else {
         userData = normalizeUser({ uid: result.user.uid, email: result.user.email })
       }
