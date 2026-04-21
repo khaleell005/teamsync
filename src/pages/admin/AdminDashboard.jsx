@@ -21,10 +21,11 @@ export default function AdminDashboard() {
 
   const getUser = (id) => userList.find((user) => user.id === id)
   const getProject = (id) => projectList.find((project) => project.id === id)
+  const getMemberTaskCount = (memberId) => taskList.filter((task) => task.assignedTo === memberId).length
 
   return (
     <Layout role="admin" user={{ name: currentUser.name, role: currentUser.role, color: currentUser.color }}>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5 sm:gap-6">
         <PageHeader
           title="Overview"
           subtitle={`Welcome back, ${currentUser.name.split(" ")[0]}. Here's what's happening.`}
@@ -37,13 +38,13 @@ export default function AdminDashboard() {
           <StatCard label="Completed" value={completedTasks.length} accent="#7CB87C" />
         </div>
 
-        <div className="grid gap-5 xl:grid-cols-2">
+        <div className="grid gap-4 lg:gap-5 xl:grid-cols-2">
           <Card>
-            <div className="mb-[18px] flex items-center justify-between gap-3">
+            <div className="mb-4 flex items-center justify-between gap-3 sm:mb-[18px]">
               <h3 className="text-sm font-semibold text-copy">Active projects</h3>
               <Btn variant="ghost" size="sm">View all</Btn>
             </div>
-            <div className="flex flex-col gap-3">
+            <div className="flex flex-col gap-2.5 sm:gap-3">
               {activeProjects.map((project) => (
                 <div key={project.id} className="rounded-2xl border border-line/60 bg-surface/80 px-3.5 py-3">
                   <div className="mb-2.5 flex items-start justify-between gap-3">
@@ -70,7 +71,7 @@ export default function AdminDashboard() {
           </Card>
 
           <Card>
-            <div className="mb-[18px] flex items-center justify-between gap-3">
+            <div className="mb-4 flex items-center justify-between gap-3 sm:mb-[18px]">
               <h3 className="text-sm font-semibold text-copy">Recent tasks</h3>
               <Btn variant="ghost" size="sm">View all</Btn>
             </div>
@@ -95,12 +96,12 @@ export default function AdminDashboard() {
         </div>
 
         <Card>
-          <div className="mb-5">
+          <div className="mb-4 sm:mb-5">
             <h3 className="text-sm font-semibold text-copy">Team members</h3>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
             {userList.map((member) => (
-              <div key={member.id} className="rounded-2xl border border-line/60 bg-surface/80 p-3.5 text-center">
+              <div key={member.id} className="rounded-2xl border border-line/60 bg-surface/80 p-3 text-center sm:p-3.5">
                 <div className="mb-2.5 flex justify-center">
                   <Avatar name={member.name} color={member.color} size={40} />
                 </div>
@@ -108,7 +109,7 @@ export default function AdminDashboard() {
                 <p className="mt-0.5 text-[10px] capitalize text-muted">{member.role}</p>
                 <div className="mt-2">
                   <Badge
-                    label={`${taskList.filter((task) => task.assignedTo === member.id).length} tasks`}
+                    label={`${getMemberTaskCount(member.id)} tasks`}
                     color="muted"
                   />
                 </div>

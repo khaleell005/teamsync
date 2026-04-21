@@ -1,46 +1,28 @@
 import { useState } from "react"
 import { Navigate } from "react-router-dom"
 import Layout from "../components/layout/Layout"
-import { Card, Avatar, Badge, Btn, Input, Select, PageHeader } from "../components/ui"
+import { Card, Avatar, Badge, Btn, Input, PageHeader } from "../components/ui"
 import { useUsers } from "../hooks/useUsers"
 import { useSessionUser } from "../hooks/useSessionUser"
 
 export default function Profile() {
   const { user: currentUser, setUser: setSessionUser } = useSessionUser()
-  const { users: userList, update: updateUser } = useUsers()
+  const { update: updateUser } = useUsers()
   const [editMode, setEditMode] = useState(false)
   const [form, setForm] = useState({
     name: currentUser?.name ?? "",
     photo: currentUser?.photo ?? null,
   })
-  const [passwordMode, setPasswordMode] = useState(false)
-  const [selectedMember, setSelectedMember] = useState("")
-  const [newPassword, setNewPassword] = useState("")
 
   if (!currentUser) {
     return <Navigate to="/login" replace />
   }
-
-  const isAdmin = currentUser.role === "admin"
 
   const handleSave = async () => {
     const updated = { ...currentUser, ...form }
     setSessionUser(updated)
     await updateUser(currentUser.id, form)
     setEditMode(false)
-  }
-
-  const handlePasswordChange = async () => {
-    if (!newPassword || !selectedMember) return
-
-    const member = userList.find((user) => user.id === selectedMember)
-    if (member) {
-      await updateUser(selectedMember, { ...member, password: newPassword })
-    }
-
-    setNewPassword("")
-    setSelectedMember("")
-    setPasswordMode(false)
   }
 
   return (
@@ -130,51 +112,6 @@ export default function Profile() {
             </div>
           )}
         </Card>
-
-        {isAdmin && (
-          <Card>
-            <h3 className="mb-5 text-sm font-semibold text-copy">Manage Member Passwords</h3>
-            <p className="mb-4 text-sm text-muted">As admin, you can view or reset passwords for team members.</p>
-
-            {!passwordMode ? (
-              <Btn onClick={() => setPasswordMode(true)}>Change member password</Btn>
-            ) : (
-              <div className="grid gap-3 md:grid-cols-[1fr_1fr_auto] md:items-end">
-                <Select
-                  label="Select member"
-                  value={selectedMember}
-                  onChange={(event) => setSelectedMember(event.target.value)}
-                  options={[
-                    { value: "", label: "Select member..." },
-                    ...userList
-                      .filter((member) => member.role !== "admin")
-                      .map((member) => ({ value: member.id, label: `${member.name} (${member.email})` })),
-                  ]}
-                />
-                <Input
-                  label="New password"
-                  type="password"
-                  placeholder="Enter new password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                />
-                <div className="flex gap-2">
-                  <Btn onClick={handlePasswordChange}>Update</Btn>
-                  <Btn
-                    variant="ghost"
-                    onClick={() => {
-                      setPasswordMode(false)
-                      setSelectedMember("")
-                      setNewPassword("")
-                    }}
-                  >
-                    Cancel
-                  </Btn>
-                </div>
-              </div>
-            )}
-          </Card>
-        )}
       </div>
     </Layout>
   )

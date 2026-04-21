@@ -1,3 +1,5 @@
+import { useEffect, useId } from "react"
+import { createPortal } from "react-dom"
 import { cn } from "../../lib/cn"
 
 // Badge
@@ -63,8 +65,56 @@ export function Card({ children, className }) {
   )
 }
 
+export function Modal({ open, onClose, children, className }) {
+  useEffect(() => {
+    if (!open) return undefined
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = "hidden"
+
+    const handleEscapeKey = (event) => {
+      if (event.key === "Escape" && typeof onClose === "function") {
+        onClose()
+      }
+    }
+
+    window.addEventListener("keydown", handleEscapeKey)
+
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener("keydown", handleEscapeKey)
+    }
+  }, [open, onClose])
+
+  if (!open || typeof document === "undefined") {
+    return null
+  }
+
+  return createPortal(
+    <div className="fixed inset-0 z-50">
+      <div
+        className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
+        onClick={() => typeof onClose === "function" && onClose()}
+      />
+      <div className="relative flex min-h-full items-center justify-center p-4 sm:p-6">
+        <div
+          role="dialog"
+          aria-modal="true"
+          onClick={(event) => event.stopPropagation()}
+          className={cn("w-full max-h-[calc(100vh-2rem)] overflow-y-auto sm:max-h-[calc(100vh-3rem)]", className)}
+        >
+          {children}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 // Stat card
 export function StatCard({ label, value, accent, className }) {
+  const statAccent = accent ?? "var(--color-copy)"
+
   return (
     <div
       className={cn(
@@ -73,7 +123,10 @@ export function StatCard({ label, value, accent, className }) {
       )}
     >
       <div className="mb-2.5 text-[11px] uppercase tracking-[0.08em] text-muted">{label}</div>
-      <div className="font-display text-3xl leading-none font-bold" style={{ color: accent ?? "var(--color-copy)" }}>
+      <div
+        className="font-display text-3xl leading-none font-bold text-[var(--stat-accent)]"
+        style={{ "--stat-accent": statAccent }}
+      >
         {value}
       </div>
     </div>
@@ -83,14 +136,17 @@ export function StatCard({ label, value, accent, className }) {
 // Avatar
 export function Avatar({ name, color, size = 36 }) {
   const initials = name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?"
+  const avatarColor = color || "var(--color-accent)"
+  const avatarSize = `${size}px`
+  const avatarFontSize = `${Math.max(11, Math.round(size * 0.33))}px`
+
   return (
     <div
-      className="flex shrink-0 items-center justify-center rounded-full font-semibold text-canvas"
+      className="flex h-[var(--avatar-size)] w-[var(--avatar-size)] shrink-0 items-center justify-center rounded-full bg-[var(--avatar-color)] text-[length:var(--avatar-font-size)] font-semibold text-canvas"
       style={{
-        width: size,
-        height: size,
-        backgroundColor: color || "var(--color-accent)",
-        fontSize: size * 0.33,
+        "--avatar-size": avatarSize,
+        "--avatar-color": avatarColor,
+        "--avatar-font-size": avatarFontSize,
       }}
     >
       {initials}
@@ -114,7 +170,6 @@ export function Btn({ children, onClick, variant = "primary", size = "md", class
 
   return (
     <button
-      className={className}
       type={type}
       disabled={disabled}
       onClick={onClick}
@@ -131,12 +186,16 @@ export function Btn({ children, onClick, variant = "primary", size = "md", class
 }
 
 // Input
-export function Input({ label, className, inputClassName, ...props }) {
+export function Input({ label, className, inputClassName, id, ...props }) {
+  const generatedId = useId()
+  const inputId = id ?? generatedId
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      {label && <label className="text-xs font-medium text-muted">{label}</label>}
+      {label && <label htmlFor={inputId} className="text-xs font-medium text-muted">{label}</label>}
       <input
         {...props}
+        id={inputId}
         className={cn(
           "h-11 w-full rounded-2xl border border-line/80 bg-black/15 px-3.5 text-sm text-copy outline-none ring-0 transition placeholder:text-faint focus:border-accent/70 focus:bg-black/20",
           inputClassName,
@@ -147,12 +206,16 @@ export function Input({ label, className, inputClassName, ...props }) {
 }
 
 // Select
-export function Select({ label, options = [], className, selectClassName, ...props }) {
+export function Select({ label, options = [], className, selectClassName, id, ...props }) {
+  const generatedId = useId()
+  const selectId = id ?? generatedId
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      {label && <label className="text-xs font-medium text-muted">{label}</label>}
+      {label && <label htmlFor={selectId} className="text-xs font-medium text-muted">{label}</label>}
       <select
         {...props}
+        id={selectId}
         className={cn(
           "h-11 w-full cursor-pointer rounded-2xl border border-line/80 bg-black/15 px-3.5 text-sm text-copy outline-none transition focus:border-accent/70 focus:bg-black/20",
           selectClassName,
@@ -164,12 +227,16 @@ export function Select({ label, options = [], className, selectClassName, ...pro
   )
 }
 
-export function TextArea({ label, className, textAreaClassName, ...props }) {
+export function TextArea({ label, className, textAreaClassName, id, ...props }) {
+  const generatedId = useId()
+  const textAreaId = id ?? generatedId
+
   return (
     <div className={cn("flex flex-col gap-1.5", className)}>
-      {label && <label className="text-xs font-medium text-muted">{label}</label>}
+      {label && <label htmlFor={textAreaId} className="text-xs font-medium text-muted">{label}</label>}
       <textarea
         {...props}
+        id={textAreaId}
         className={cn(
           "min-h-[92px] w-full rounded-2xl border border-line/80 bg-black/15 px-3.5 py-3 text-sm leading-6 text-copy outline-none transition placeholder:text-faint focus:border-accent/70 focus:bg-black/20",
           textAreaClassName,
@@ -182,12 +249,12 @@ export function TextArea({ label, className, textAreaClassName, ...props }) {
 // Page header
 export function PageHeader({ title, subtitle, action, className }) {
   return (
-    <div className={cn("flex flex-wrap items-start justify-between gap-4", className)}>
+    <div className={cn("flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between", className)}>
       <div>
         <h1 className="font-display text-3xl leading-none font-bold tracking-[-0.03em] text-copy">{title}</h1>
-        {subtitle && <p className="mt-2 max-w-xl text-sm text-muted">{subtitle}</p>}
+        {subtitle && <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">{subtitle}</p>}
       </div>
-      {action && <div>{action}</div>}
+      {action && <div className="shrink-0">{action}</div>}
     </div>
   )
 }

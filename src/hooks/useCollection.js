@@ -6,8 +6,7 @@ import {
   doc,
   getDoc,
   getDocs,
-  orderBy,
-  query,
+  onSnapshot,
   serverTimestamp,
   updateDoc,
 } from "firebase/firestore"
@@ -16,6 +15,41 @@ import { formatDisplayDate } from "../lib/appData"
 
 function mapSnapshot(snapshot) {
   return snapshot.docs.map((item) => ({ id: item.id, ...item.data() }))
+}
+
+function toSortValue(value) {
+  if (!value) return 0
+
+  if (typeof value.toMillis === "function") {
+    return value.toMillis()
+  }
+
+  if (value instanceof Date) {
+    return value.getTime()
+  }
+
+  if (typeof value === "number") {
+    return value
+  }
+
+  if (typeof value === "string") {
+    const parsed = Date.parse(value)
+    return Number.isNaN(parsed) ? 0 : parsed
+  }
+
+  if (typeof value.seconds === "number") {
+    return value.seconds * 1000
+  }
+
+  return 0
+}
+
+function sortDocuments(documents) {
+  return [...documents].sort((a, b) => {
+    const aValue = toSortValue(a.createdAtTimestamp ?? a.createdAt)
+    const bValue = toSortValue(b.createdAtTimestamp ?? b.createdAt)
+    return bValue - aValue
+  })
 }
 
 export function useCollection(collectionName) {
@@ -28,12 +62,9 @@ export function useCollection(collectionName) {
       setLoading(true)
       setError("")
 
-      const collectionQuery = query(
-        collection(db, collectionName),
-        orderBy("createdAtTimestamp", "desc"),
-      )
-      const snapshot = await getDocs(collectionQuery)
-      const nextDocuments = mapSnapshot(snapshot)
+      const collectionRef = collection(db, collectionName)
+      const snapshot = await getDocs(collectionRef)
+      const nextDocuments = sortDocuments(mapSnapshot(snapshot))
       setDocuments(nextDocuments)
       return nextDocuments
     } catch (err) {
@@ -65,7 +96,6 @@ export function useCollection(collectionName) {
         createdAtTimestamp: data.createdAtTimestamp ?? serverTimestamp(),
       }
       const docRef = await addDoc(collection(db, collectionName), payload)
-      await fetchAll()
       return docRef.id
     } catch (err) {
       setError(err.message)
@@ -78,7 +108,6 @@ export function useCollection(collectionName) {
       setError("")
       const docRef = doc(db, collectionName, id)
       await updateDoc(docRef, data)
-      await fetchAll()
     } catch (err) {
       setError(err.message)
       throw err
@@ -98,37 +127,24 @@ export function useCollection(collectionName) {
   }
 
   useEffect(() => {
-    let isActive = true
+    setLoading(true)
+    setError("")
 
-    async function loadDocuments() {
-      try {
-        setLoading(true)
-        setError("")
-
-        const collectionQuery = query(
-          collection(db, collectionName),
-          orderBy("createdAtTimestamp", "desc"),
-        )
-        const snapshot = await getDocs(collectionQuery)
-
-        if (isActive) {
-          setDocuments(mapSnapshot(snapshot))
-        }
-      } catch (err) {
-        if (isActive) {
-          setError(err.message)
-        }
-      } finally {
-        if (isActive) {
-          setLoading(false)
-        }
-      }
-    }
-
-    void loadDocuments()
+    const collectionRef = collection(db, collectionName)
+    const unsubscribe = onSnapshot(
+      collectionRef,
+      (snapshot) => {
+        setDocuments(sortDocuments(mapSnapshot(snapshot)))
+        setLoading(false)
+      },
+      (err) => {
+        setError(err.message)
+        setLoading(false)
+      },
+    )
 
     return () => {
-      isActive = false
+      unsubscribe()
     }
   }, [collectionName])
 

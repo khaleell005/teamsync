@@ -27,6 +27,14 @@ export default function TeamView() {
     tasks: projectTasks.filter((task) => task.assignedTo === member.id),
   }))
 
+  const getMemberCardVars = (memberColor) => ({
+    "--member-color": memberColor,
+    "--member-border": `${memberColor}33`,
+    "--member-header-bg": `${memberColor}18`,
+    "--member-header-line": `${memberColor}22`,
+    "--member-note-bg": `${memberColor}12`,
+  })
+
   return (
     <Layout role="member" user={{ name: currentUser.name, role: currentUser.role, color: currentUser.color }}>
       <div className="flex flex-col gap-6">
@@ -75,8 +83,12 @@ export default function TeamView() {
 
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               {tasksByMember.map(({ member, tasks }) => (
-                <div key={member.id} className="overflow-hidden rounded-3xl border bg-surface/90" style={{ borderColor: `${member.color}33` }}>
-                  <div className="flex items-center gap-3 border-b px-4 py-3.5" style={{ backgroundColor: `${member.color}18`, borderBottomColor: `${member.color}22` }}>
+                <div
+                  key={member.id}
+                  className="overflow-hidden rounded-3xl border border-[var(--member-border)] bg-surface/90"
+                  style={getMemberCardVars(member.color)}
+                >
+                  <div className="flex items-center gap-3 border-b border-b-[var(--member-header-line)] bg-[var(--member-header-bg)] px-4 py-3.5">
                     <Avatar name={member.name} color={member.color} size={32} />
                     <div>
                       <p className="text-sm font-semibold text-copy">{member.name}</p>
@@ -105,8 +117,8 @@ export default function TeamView() {
                           {task.deadline && <span className="text-[10px] text-faint">Due {task.deadline}</span>}
                         </div>
                         {task.progressNote && (
-                          <div className="mt-2 rounded-xl border-l-2 px-2 py-1" style={{ backgroundColor: `${member.color}12`, borderLeftColor: member.color }}>
-                            <p className="text-[10px] italic" style={{ color: member.color }}>&quot;{task.progressNote}&quot;</p>
+                          <div className="mt-2 rounded-xl border-l-2 border-l-[var(--member-color)] bg-[var(--member-note-bg)] px-2 py-1">
+                            <p className="text-[10px] italic text-[var(--member-color)]">&quot;{task.progressNote}&quot;</p>
                           </div>
                         )}
                       </div>

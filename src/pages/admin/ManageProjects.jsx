@@ -1,6 +1,6 @@
 import { useState } from "react"
 import Layout from "../../components/layout/Layout"
-import { Card, Avatar, Badge, Btn, Input, TextArea, PageHeader, Divider, EmptyState, LoadingScreen } from "../../components/ui"
+import { Card, Avatar, Badge, Btn, Input, TextArea, PageHeader, Divider, Modal, EmptyState, LoadingScreen } from "../../components/ui"
 import { useProjects } from "../../hooks/useProjects"
 import { useUsers } from "../../hooks/useUsers"
 import { useTasks } from "../../hooks/useTasks"
@@ -25,6 +25,7 @@ export default function ManageProjects() {
   const updateState = (updates) => setState((currentState) => ({ ...currentState, ...updates }))
   const getUser = (id) => userList.find((user) => user.id === id)
   const getTaskCount = (projectId) => taskList.filter((task) => task.projectId === projectId).length
+  const closeForm = () => updateState({ showForm: false, form: { name: "", description: "", leadId: "", memberIds: [] } })
 
   const toggleMember = (id) => {
     updateState({
@@ -35,6 +36,11 @@ export default function ManageProjects() {
           : [...form.memberIds, id],
       },
     })
+  }
+
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    await handleAdd()
   }
 
   const handleAdd = async () => {
@@ -64,25 +70,26 @@ export default function ManageProjects() {
 
   return (
     <Layout role="admin" user={{ name: adminUser.name, role: adminUser.role, color: adminUser.color }}>
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5 sm:gap-6">
         <PageHeader
           title="Projects"
           subtitle={`${projects.filter((project) => project.status === "active").length} active · ${projects.filter((project) => project.status === "completed").length} completed`}
-          action={<Btn onClick={() => updateState({ showForm: !showForm })}>{showForm ? "Cancel" : "+ New project"}</Btn>}
+          action={<Btn onClick={() => updateState({ showForm: true })}>+ New project</Btn>}
         />
 
-        {showForm && (
+        <Modal open={showForm} onClose={closeForm} className="max-w-4xl">
           <Card>
             <h3 className="mb-5 text-sm font-semibold text-copy">Create project</h3>
-            <div className="flex flex-col gap-4">
+            <form className="space-y-4.5" onSubmit={handleSubmit}>
               <Input label="Project name" placeholder="e.g. NexaFlow Rebrand" value={form.name} onChange={(event) => updateState({ form: { ...form, name: event.target.value } })} />
 
               <div>
                 <label className="mb-2 block text-xs font-medium text-muted">Project Lead</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {userList.filter((user) => user.role === "PL" || user.role === "member").map((user) => (
                     <button
                       key={user.id}
+                      type="button"
                       onClick={() => updateState({ form: { ...form, leadId: user.id } })}
                       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${
                         form.leadId === user.id
@@ -102,15 +109,16 @@ export default function ManageProjects() {
                 placeholder="Brief description of this project..."
                 value={form.description}
                 onChange={(event) => updateState({ form: { ...form, description: event.target.value } })}
-                rows={2}
+                rows={3}
               />
 
               <div>
                 <label className="mb-2 block text-xs font-medium text-muted">Assign members</label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-2.5">
                   {userList.filter((user) => user.role !== "admin").map((user) => (
                     <button
                       key={user.id}
+                      type="button"
                       onClick={() => toggleMember(user.id)}
                       className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition ${
                         form.memberIds.includes(user.id)
@@ -125,17 +133,20 @@ export default function ManageProjects() {
                 </div>
               </div>
 
-              <div><Btn onClick={handleAdd}>Create project</Btn></div>
-            </div>
+              <div className="flex flex-wrap justify-end gap-2 border-t border-line/50 pt-3">
+                <Btn type="button" variant="ghost" onClick={closeForm}>Cancel</Btn>
+                <Btn type="submit">Create project</Btn>
+              </div>
+            </form>
           </Card>
-        )}
+        </Modal>
 
-        <div className="grid gap-4 xl:grid-cols-2">
+        <div className="grid gap-4 lg:gap-5 xl:grid-cols-2">
           {projects.length === 0 && <EmptyState message="No projects yet. Create your first one." />}
 
           {projects.map((project) => (
             <Card key={project.id}>
-              <div className="mb-3 flex items-start justify-between gap-3">
+              <div className="mb-3.5 flex items-start justify-between gap-3">
                 <div className="min-w-0 flex-1">
                   <h3 className="text-[15px] font-semibold text-copy">{project.name}</h3>
                   <p className="mt-1 text-sm leading-6 text-muted">{project.description}</p>
@@ -145,7 +156,7 @@ export default function ManageProjects() {
 
               <Divider />
 
-              <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center justify-between gap-3.5">
                 <div className="flex flex-wrap items-center gap-y-2">
                   {project.leadId && getUser(project.leadId) && (
                     <div className="mr-2 flex items-center gap-1.5">

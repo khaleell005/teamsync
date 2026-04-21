@@ -3,6 +3,7 @@ import { Navigate, useNavigate } from "react-router-dom"
 import { Input, Btn } from "../components/ui"
 import { useAuth } from "../hooks/useAuth"
 import { useSessionUser } from "../hooks/useSessionUser"
+import { hasValidRole } from "../lib/session"
 
 export default function Login() {
   const [email, setEmail] = useState("")
@@ -14,11 +15,13 @@ export default function Login() {
   const { user: sessionUser, homeRoute } = useSessionUser()
   const navigate = useNavigate()
 
-  if (sessionUser) {
+  if (sessionUser && hasValidRole(sessionUser)) {
     return <Navigate to={homeRoute} replace />
   }
 
-  const handleLogin = async () => {
+  const handleLogin = async (event) => {
+    event.preventDefault()
+
     if (!email || !password) {
       setMessage("Please enter email and password")
       return
@@ -51,11 +54,12 @@ export default function Login() {
         </div>
 
         <div className="rounded-[28px] border border-line/70 bg-[linear-gradient(180deg,rgba(63,54,45,0.95)_0%,rgba(48,41,34,0.95)_100%)] px-7 py-8 shadow-panel backdrop-blur-xl">
-          <div className="flex flex-col gap-4.5">
+          <form className="flex flex-col gap-4.5" onSubmit={handleLogin}>
             <Input
               label="Email address"
               type="email"
               placeholder="you@teamsync.io"
+              autoComplete="username"
               value={email}
               onChange={e => setEmail(e.target.value)}
             />
@@ -63,6 +67,7 @@ export default function Login() {
               label="Password"
               type="password"
               placeholder="••••••••"
+              autoComplete="current-password"
               value={password}
               onChange={e => setPassword(e.target.value)}
             />
@@ -70,11 +75,11 @@ export default function Login() {
             {message && <p className="text-xs text-orange-200">{message}</p>}
 
             <div className="mt-1">
-              <Btn className="w-full" onClick={handleLogin} disabled={loading}>
+              <Btn className="w-full" type="submit" disabled={loading}>
                 {loading ? "Please wait..." : "Sign in"}
               </Btn>
             </div>
-          </div>
+          </form>
 
           <div className="mt-6 rounded-2xl border border-line/70 bg-white/[0.03] px-4 py-3">
             <p className="text-[11px] leading-6 text-muted">

@@ -109,9 +109,9 @@ export default function MemberDashboard() {
               <h3 className="mb-4 text-sm font-semibold text-copy">Progress summary</h3>
               <div className="flex flex-col gap-3">
                 {[
-                  { label: "Completed", count: completed.length, total: myTasks.length, color: "#7CB87C" },
-                  { label: "In progress", count: inProgress.length, total: myTasks.length, color: "var(--color-accent)" },
-                  { label: "Not started", count: notStarted.length, total: myTasks.length, color: "var(--color-faint)" },
+                  { label: "Completed", count: completed.length, total: myTasks.length, barClassName: "bg-emerald-400" },
+                  { label: "In progress", count: inProgress.length, total: myTasks.length, barClassName: "bg-accent" },
+                  { label: "Not started", count: notStarted.length, total: myTasks.length, barClassName: "bg-faint" },
                 ].map((item) => (
                   <div key={item.label}>
                     <div className="mb-1 flex items-center justify-between text-xs">
@@ -120,10 +120,9 @@ export default function MemberDashboard() {
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-full bg-surface">
                       <div
-                        className="h-full rounded-full transition-[width] duration-300"
+                        className={`h-full w-[var(--progress-width)] rounded-full transition-[width] duration-300 ${item.barClassName}`}
                         style={{
-                          width: `${myTasks.length ? (item.count / myTasks.length) * 100 : 0}%`,
-                          backgroundColor: item.color,
+                          "--progress-width": `${myTasks.length ? (item.count / myTasks.length) * 100 : 0}%`,
                         }}
                       />
                     </div>

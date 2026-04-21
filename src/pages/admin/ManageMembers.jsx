@@ -1,19 +1,20 @@
 import { useState } from "react"
 import Layout from "../../components/layout/Layout"
-import { Card, Avatar, Badge, Btn, Input, Select, PageHeader, Divider, LoadingScreen } from "../../components/ui"
+import { Card, Avatar, Badge, Btn, Input, Select, PageHeader, Modal, EmptyState, LoadingScreen } from "../../components/ui"
 import { useUsers } from "../../hooks/useUsers"
-import { DEFAULT_MEMBER_COLORS, formatDisplayDate } from "../../lib/appData"
+import { DEFAULT_MEMBER_COLORS, createDefaultMemberForm, formatDisplayDate } from "../../lib/appData"
 import { useSessionUser } from "../../hooks/useSessionUser"
 import { createUserWithEmailAndPassword } from "firebase/auth"
-import { doc, setDoc } from "firebase/firestore"
-import { auth, db } from "../../firebase/firebase"
+import { doc, serverTimestamp, setDoc } from "firebase/firestore"
+import { db, runWithSecondaryAuth } from "../../firebase/firebase"
+import { cn } from "../../lib/cn"
 
 export default function ManageMembers() {
   const { user: adminUser } = useSessionUser()
-  const { users, loading, add, remove, fetchAll } = useUsers()
+  const { users, loading, remove } = useUsers()
   const [state, setState] = useState({
     showForm: false,
-    form: { name: "", email: "", password: "", role: "member", color: DEFAULT_MEMBER_COLORS[0] },
+    form: createDefaultMemberForm(),
     saving: false,
     error: "",
   })
@@ -26,6 +27,15 @@ export default function ManageMembers() {
 
   const updateState = (updates) => setState((currentState) => ({ ...currentState, ...updates }))
 
+  const getColorChipClassName = (color) =>
+    cn(
+      "h-7 w-7 rounded-full bg-[var(--chip-color)] transition",
+      form.color === color ? "ring-2 ring-copy/90 ring-offset-2 ring-offset-canvas" : "hover:ring-1 hover:ring-copy/35",
+    )
+
+  const memberTableColumns = "grid-cols-[minmax(220px,2.1fr)_minmax(280px,2.4fr)_minmax(140px,1fr)_minmax(140px,1fr)_minmax(170px,1.3fr)]"
+  const closeForm = () => updateState({ showForm: false, error: "", form: createDefaultMemberForm(), saving: false })
+
   const handleAdd = async () => {
     if (!form.name || !form.email || !form.password) {
       updateState({ error: "Please fill in all fields" })
@@ -35,7 +45,9 @@ export default function ManageMembers() {
     updateState({ saving: true, error: "" })
 
     try {
-      const authResult = await createUserWithEmailAndPassword(auth, form.email, form.password)
+      const authResult = await runWithSecondaryAuth((secondaryAuth) =>
+        createUserWithEmailAndPassword(secondaryAuth, form.email, form.password),
+      )
       
       await setDoc(doc(db, "users", authResult.user.uid), {
         name: form.name,
@@ -43,13 +55,11 @@ export default function ManageMembers() {
         role: form.role,
         color: form.color,
         createdAt: formatDisplayDate(),
-        createdAtTimestamp: new Date(),
+        createdAtTimestamp: serverTimestamp(),
       })
 
-      await fetchAll()
-
       updateState({
-        form: { name: "", email: "", password: "", role: "member", color: DEFAULT_MEMBER_COLORS[0] },
+        form: createDefaultMemberForm(),
         showForm: false,
         saving: false,
       })
@@ -63,92 +73,112 @@ export default function ManageMembers() {
     }
   }
 
+  const handleSubmit = async (event) => {
+    event.preventDefault()
+    await handleAdd()
+  }
+
   return (
     <Layout role="admin" user={{ name: adminUser.name, role: adminUser.role, color: adminUser.color }}>
       <div className="flex flex-col gap-6">
         <PageHeader
           title="Members"
           subtitle={`${users.length} team members in your workspace`}
-          action={<Btn onClick={() => updateState({ showForm: !showForm })}>{showForm ? "Cancel" : "+ Add member"}</Btn>}
+          action={<Btn onClick={() => updateState({ showForm: true })}>+ Add member</Btn>}
         />
 
-        {showForm && (
+        <Modal open={showForm} onClose={() => !saving && closeForm()} className="max-w-3xl">
           <Card>
             <h3 className="mb-5 text-sm font-semibold text-copy">Create member account</h3>
-            <div className="mb-4 grid gap-4 sm:grid-cols-2">
-              <Input label="Full name" placeholder="Tunde Musa" value={form.name} onChange={(event) => updateState({ form: { ...form, name: event.target.value } })} />
-              <Input label="Email address" type="email" placeholder="tunde@teamsync.io" value={form.email} onChange={(event) => updateState({ form: { ...form, email: event.target.value } })} />
-              <Input label="Temporary password" type="password" placeholder="••••••••" value={form.password} onChange={(event) => updateState({ form: { ...form, password: event.target.value } })} />
-              <Select
-                label="Role"
-                value={form.role}
-                onChange={(event) => updateState({ form: { ...form, role: event.target.value } })}
-                options={[
-                  { value: "member", label: "Member" },
-                  { value: "PL", label: "Project Lead" },
-                  { value: "viewer", label: "Viewer" },
-                ]}
-              />
-            </div>
-
-            <div className="mb-5">
-              <label className="mb-2 block text-xs font-medium text-muted">Member color</label>
-              <div className="flex flex-wrap items-center gap-3">
-                <div className="flex flex-wrap gap-2">
-                  {DEFAULT_MEMBER_COLORS.map((color) => (
-                    <button
-                      key={color}
-                      onClick={() => updateState({ form: { ...form, color } })}
-                      className="h-7 w-7 rounded-full transition"
-                      style={{
-                        backgroundColor: color,
-                        boxShadow: form.color === color ? "0 0 0 2px rgba(245,240,232,0.9)" : "none",
-                      }}
-                    />
-                  ))}
-                </div>
-                <label className="flex items-center gap-2 text-xs text-muted">
-                  <input
-                    type="color"
-                    value={form.color}
-                    onChange={(event) => updateState({ form: { ...form, color: event.target.value } })}
-                    className="h-7 w-7 cursor-pointer rounded-md border border-line/80 bg-transparent"
-                  />
-                  Custom
-                </label>
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Input label="Full name" placeholder="Tunde Musa" value={form.name} onChange={(event) => updateState({ form: { ...form, name: event.target.value } })} />
+                <Input label="Email address" type="email" placeholder="tunde@teamsync.io" value={form.email} onChange={(event) => updateState({ form: { ...form, email: event.target.value } })} />
+                <Input label="Temporary password" type="password" placeholder="••••••••" value={form.password} onChange={(event) => updateState({ form: { ...form, password: event.target.value } })} />
+                <Select
+                  label="Role"
+                  value={form.role}
+                  onChange={(event) => updateState({ form: { ...form, role: event.target.value } })}
+                  options={[
+                    { value: "member", label: "Member" },
+                    { value: "PL", label: "Project Lead" },
+                    { value: "viewer", label: "Viewer" },
+                  ]}
+                />
               </div>
-            </div>
 
-            {error && <p className="mb-4 text-sm text-red-500">{error}</p>}
+              <div>
+                <label className="mb-2 block text-xs font-medium text-muted">Member color</label>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex flex-wrap gap-2">
+                    {DEFAULT_MEMBER_COLORS.map((color) => (
+                      <button
+                        key={color}
+                        type="button"
+                        onClick={() => updateState({ form: { ...form, color } })}
+                        className={getColorChipClassName(color)}
+                        style={{ "--chip-color": color }}
+                      />
+                    ))}
+                  </div>
+                  <label className="flex items-center gap-2 text-xs text-muted">
+                    <input
+                      type="color"
+                      value={form.color}
+                      onChange={(event) => updateState({ form: { ...form, color: event.target.value } })}
+                      className="h-7 w-7 cursor-pointer rounded-md border border-line/80 bg-transparent"
+                    />
+                    Custom
+                  </label>
+                </div>
+              </div>
 
-            <Btn onClick={handleAdd} disabled={saving}>
-              {saving ? "Creating..." : "Create account"}
-            </Btn>
+              {error && <p className="text-sm text-red-500">{error}</p>}
+
+              <div className="flex flex-wrap justify-end gap-2 border-t border-line/50 pt-3">
+                <Btn type="button" variant="ghost" disabled={saving} onClick={closeForm}>Cancel</Btn>
+                <Btn type="submit" disabled={saving}>{saving ? "Creating..." : "Create account"}</Btn>
+              </div>
+            </form>
           </Card>
-        )}
+        </Modal>
 
-        <Card>
+        <Card className="overflow-hidden p-0">
           <div className="overflow-x-auto">
-            <div className="min-w-[720px]">
-              <div className="grid grid-cols-[2fr_2fr_1fr_1fr_120px] px-3 py-2 text-[10px] uppercase tracking-[0.1em] text-faint">
+            <div className="min-w-[980px]">
+              <div className={cn("grid border-b border-line/60 px-5 py-3 text-[10px] uppercase tracking-[0.1em] text-faint", memberTableColumns)}>
                 {["Name", "Email", "Role", "Joined", ""].map((heading) => (
                   <span key={heading}>{heading}</span>
                 ))}
               </div>
 
-              <Divider />
+              {users.length === 0 && (
+                <div className="px-5 py-10">
+                  <EmptyState message="No members yet." />
+                </div>
+              )}
 
               {users.map((member) => (
-                <div key={member.id} className="grid grid-cols-[2fr_2fr_1fr_1fr_120px] items-center rounded-2xl px-3 py-3 transition hover:bg-white/[0.03]">
-                  <div className="flex items-center gap-3">
+                <div
+                  key={member.id}
+                  className={cn(
+                    "grid items-center border-b border-line/35 px-5 py-3.5 transition hover:bg-white/[0.03] last:border-b-0",
+                    memberTableColumns,
+                  )}
+                >
+                  <div className="flex items-center gap-3 pr-4">
                     <Avatar name={member.name} color={member.color} size={32} />
-                    <p className="text-sm font-medium text-copy">{member.name}</p>
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-copy">{member.name}</p>
+                    </div>
                   </div>
-                  <p className="text-sm text-muted">{member.email}</p>
-                  <Badge
-                    label={member.role}
-                    color={member.role === "admin" ? "gold" : member.role === "PL" ? "blue" : member.role === "member" ? "accent" : "muted"}
-                  />
+                  <p className="truncate pr-4 text-sm text-muted">{member.email}</p>
+                  <div>
+                    <Badge
+                      label={member.role}
+                      color={member.role === "admin" ? "gold" : member.role === "PL" ? "blue" : member.role === "member" ? "accent" : "muted"}
+                    />
+                  </div>
                   <p className="text-sm text-muted">{member.createdAt}</p>
                   <div className="flex justify-end">
                     {member.role !== "admin" && (

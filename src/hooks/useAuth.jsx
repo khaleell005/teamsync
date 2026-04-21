@@ -1,14 +1,11 @@
 import { useState, useEffect } from "react"
 import { 
   signInWithEmailAndPassword, 
-  createUserWithEmailAndPassword,
   signOut,
-  onAuthStateChanged,
-  updateProfile
+  onAuthStateChanged
 } from "firebase/auth"
-import { doc, setDoc, getDoc } from "firebase/firestore"
+import { doc, getDoc } from "firebase/firestore"
 import { auth, db } from "../firebase/firebase"
-import { formatDisplayDate, getRandomMemberColor } from "../lib/appData"
 import { normalizeUser, setStoredUser, clearStoredUser } from "../lib/session"
 
 export function useAuth() {
@@ -19,14 +16,23 @@ export function useAuth() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
-        if (userDoc.exists()) {
-          setUser(normalizeUser({ uid: firebaseUser.uid, ...userDoc.data() }))
-        } else {
-          setUser(normalizeUser({ uid: firebaseUser.uid, email: firebaseUser.email }))
+        try {
+          const userDoc = await getDoc(doc(db, "users", firebaseUser.uid))
+          const nextUser = userDoc.exists()
+            ? normalizeUser({ uid: firebaseUser.uid, ...userDoc.data() })
+            : normalizeUser({ uid: firebaseUser.uid, email: firebaseUser.email })
+
+          setUser(nextUser)
+          setStoredUser(nextUser)
+        } catch (err) {
+          setError(err.message)
+          const fallbackUser = normalizeUser({ uid: firebaseUser.uid, email: firebaseUser.email })
+          setUser(fallbackUser)
+          setStoredUser(fallbackUser)
         }
       } else {
         setUser(null)
+        clearStoredUser()
       }
       setLoading(false)
     })
@@ -54,40 +60,18 @@ export function useAuth() {
     }
   }
 
-  const register = async (name, email, password, role = "member") => {
+  const logout = async () => {
     setError("")
     try {
-      const result = await createUserWithEmailAndPassword(auth, email, password)
-      await updateProfile(result.user, { displayName: name })
-      
-      const userData = {
-        name,
-        email,
-        role,
-        color: getRandomMemberColor(),
-        createdAt: formatDisplayDate()
-      }
-      
-      await setDoc(doc(db, "users", result.user.uid), userData)
-      const userWithUid = normalizeUser({ uid: result.user.uid, ...userData })
-      setUser(userWithUid)
-      setStoredUser(userWithUid)
-      return userWithUid
+      await signOut(auth)
+      setUser(null)
+      clearStoredUser()
+      return true
     } catch (err) {
       setError(err.message)
       throw err
     }
   }
 
-  const logout = async () => {
-    try {
-      await signOut(auth)
-      setUser(null)
-      clearStoredUser()
-    } catch (err) {
-      setError(err.message)
-    }
-  }
-
-  return { user, loading, error, login, register, logout }
+  return { user, loading, error, login, logout }
 }

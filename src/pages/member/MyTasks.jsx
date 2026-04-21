@@ -41,6 +41,11 @@ export default function MyTasks() {
     setEditingId(null)
   }
 
+  const handleTaskUpdateSubmit = async (event, taskId) => {
+    event.preventDefault()
+    await saveUpdate(taskId)
+  }
+
   const statusOptions = [
     { value: "not_started", label: "Not started" },
     { value: "in_progress", label: "In progress" },
@@ -91,7 +96,7 @@ export default function MyTasks() {
                 )}
 
                 {isEditing ? (
-                  <div className="flex flex-col gap-3">
+                  <form className="flex flex-col gap-3" onSubmit={(event) => handleTaskUpdateSubmit(event, task.id)}>
                     <Divider />
                     <Select
                       label="Update status"
@@ -107,10 +112,10 @@ export default function MyTasks() {
                       rows={2}
                     />
                     <div className="flex gap-2">
-                      <Btn onClick={() => saveUpdate(task.id)}>Save update</Btn>
-                      <Btn variant="ghost" onClick={() => setEditingId(null)}>Cancel</Btn>
+                      <Btn type="submit">Save update</Btn>
+                      <Btn type="button" variant="ghost" onClick={() => setEditingId(null)}>Cancel</Btn>
                     </div>
-                  </div>
+                  </form>
                 ) : !isViewer && (
                   <Btn variant="ghost" size="sm" onClick={() => openEdit(task)}>
                     Update progress

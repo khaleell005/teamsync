@@ -8,6 +8,16 @@ export const DEFAULT_MEMBER_COLORS = [
   "#7EC9B8",
 ]
 
+export function createDefaultMemberForm() {
+  return {
+    name: "",
+    email: "",
+    password: "",
+    role: "member",
+    color: DEFAULT_MEMBER_COLORS[0],
+  }
+}
+
 export function formatDisplayDate(date = new Date()) {
   return date.toLocaleDateString("en-US", {
     month: "short",

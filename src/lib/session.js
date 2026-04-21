@@ -1,4 +1,5 @@
 const SESSION_KEY = "teamsync_user"
+const MEMBER_ROLES = ["member", "PL", "viewer"]
 
 export function normalizeUser(rawUser) {
   if (!rawUser) return null
@@ -10,6 +11,11 @@ export function normalizeUser(rawUser) {
     id,
     uid: rawUser.uid ?? id,
   }
+}
+
+export function hasValidRole(user) {
+  if (!user?.role) return false
+  return user.role === "admin" || MEMBER_ROLES.includes(user.role)
 }
 
 export function getStoredUser() {
@@ -38,6 +44,6 @@ export function clearStoredUser() {
 }
 
 export function getHomeRoute(user) {
-  if (!user) return "/login"
+  if (!hasValidRole(user)) return "/login"
   return user.role === "admin" ? "/admin/dashboard" : "/dashboard"
 }

@@ -1,10 +1,10 @@
 import { Navigate, Outlet } from "react-router-dom"
-import { getHomeRoute, getStoredUser } from "../../lib/session"
+import { getHomeRoute, getStoredUser, hasValidRole } from "../../lib/session"
 
 export default function ProtectedRoute({ allowedRoles }) {
   const user = getStoredUser()
 
-  if (!user) {
+  if (!user || !hasValidRole(user)) {
     return <Navigate to="/login" replace />
   }
 

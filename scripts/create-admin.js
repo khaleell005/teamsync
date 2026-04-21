@@ -1,7 +1,7 @@
 import 'dotenv/config'
 import { initializeApp } from 'firebase/app'
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth'
-import { getFirestore, setDoc, doc } from 'firebase/firestore'
+import { getFirestore, setDoc, doc, serverTimestamp } from 'firebase/firestore'
 
 const args = process.argv.slice(2)
 const email = args[0] || 'admin@teamsync.io'
@@ -38,7 +38,8 @@ async function createAdmin() {
       email,
       role,
       color: "#99977C",
-      createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+      createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+      createdAtTimestamp: serverTimestamp(),
     }
     
     await setDoc(doc(db, "users", result.user.uid), userData)
