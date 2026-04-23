@@ -59,7 +59,7 @@ export default function AdminDashboard() {
                       const member = getUser(memberId)
                       return member ? (
                         <div key={memberId} className="-mr-1.5" title={member.name}>
-                          <Avatar name={member.name} color={member.color} size={24} />
+                          <Avatar name={member.name} color={member.color} photo={member.photo} size={24} />
                         </div>
                       ) : null
                     })}
@@ -86,7 +86,7 @@ export default function AdminDashboard() {
                       <p className="truncate text-sm text-copy">{task.title}</p>
                       <p className="mt-0.5 text-[11px] text-muted">{getProject(task.projectId)?.name}</p>
                     </div>
-                    {assignee && <Avatar name={assignee.name} color={assignee.color} size={24} />}
+                    {assignee && <Avatar name={assignee.name} color={assignee.color} photo={assignee.photo} size={24} />}
                     <StatusBadge status={task.status} />
                   </div>
                 )
@@ -103,7 +103,7 @@ export default function AdminDashboard() {
             {userList.map((member) => (
               <div key={member.id} className="rounded-2xl border border-line/60 bg-surface/80 p-3 text-center sm:p-3.5">
                 <div className="mb-2.5 flex justify-center">
-                  <Avatar name={member.name} color={member.color} size={40} />
+                  <Avatar name={member.name} color={member.color} photo={member.photo} size={40} />
                 </div>
                 <p className="text-sm font-medium text-copy">{member.name.split(" ")[0]}</p>
                 <p className="mt-0.5 text-[10px] capitalize text-muted">{member.role}</p>

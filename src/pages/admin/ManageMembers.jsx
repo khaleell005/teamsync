@@ -214,7 +214,7 @@ export default function ManageMembers() {
                   )}
                 >
                   <div className="flex items-center gap-3 pr-4">
-                    <Avatar name={member.name} color={member.color} size={32} />
+                    <Avatar name={member.name} color={member.color} photo={member.photo} size={32} />
                     <div className="min-w-0">
                       <p className="truncate text-sm font-medium text-copy">{member.name}</p>
                     </div>

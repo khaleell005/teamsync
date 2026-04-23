@@ -91,7 +91,7 @@ export default function MemberDashboard() {
                     <div className="flex items-center">
                       {getTeammates(project).map((member) => (
                         <div key={member.id} className="-mr-1.5" title={member.name}>
-                          <Avatar name={member.name} color={member.color} size={22} />
+                          <Avatar name={member.name} color={member.color} photo={member.photo} size={22} />
                         </div>
                       ))}
                       {getTeammates(project).length > 0 && (

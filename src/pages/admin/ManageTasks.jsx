@@ -210,7 +210,7 @@ export default function ManageTasks() {
                     <div className="flex items-center gap-2 pr-3">
                       {assignee ? (
                         <>
-                          <Avatar name={assignee.name} color={assignee.color} size={22} />
+                          <Avatar name={assignee.name} color={assignee.color} photo={assignee.photo} size={22} />
                           <span className="truncate text-sm text-muted">{assignee.name.split(" ")[0]}</span>
                         </>
                       ) : (

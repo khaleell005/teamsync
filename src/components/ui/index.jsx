@@ -134,13 +134,20 @@ export function StatCard({ label, value, accent, className }) {
 }
 
 // Avatar
-export function Avatar({ name, color, size = 36 }) {
+export function Avatar({ name, color, size = 36, photo }) {
   const initials = name?.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase() || "?"
   const avatarColor = color || "var(--color-accent)"
   const avatarSize = `${size}px`
   const avatarFontSize = `${Math.max(11, Math.round(size * 0.33))}px`
 
-  return (
+  return photo ? (
+    <img
+      src={photo}
+      alt={name}
+      className="rounded-full object-cover"
+      style={{ width: avatarSize, height: avatarSize }}
+    />
+  ) : (
     <div
       className="flex h-[var(--avatar-size)] w-[var(--avatar-size)] shrink-0 items-center justify-center rounded-full bg-[var(--avatar-color)] text-[length:var(--avatar-font-size)] font-semibold text-canvas"
       style={{
@@ -153,8 +160,6 @@ export function Avatar({ name, color, size = 36 }) {
     </div>
   )
 }
-
-// Button
 export function Btn({ children, onClick, variant = "primary", size = "md", className, disabled = false, type = "button" }) {
   const sizes = {
     sm: "h-8 px-3.5 text-xs",

@@ -88,7 +88,11 @@ export default function Sidebar({ role = "admin", user = { name: "Khaleel A", ro
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--user-color)] text-[11px] font-semibold text-canvas"
             style={{ "--user-color": userColor }}
           >
-            {initials}
+            {user.photo ? (
+              <img src={user.photo} alt={user.name} className="h-full w-full rounded-full object-cover" />
+            ) : (
+              initials
+            )}
           </div>
           <div>
             <div className="text-sm font-medium text-copy">{user.name}</div>

@@ -73,7 +73,7 @@ export default function TeamView() {
                 <div className="flex">
                   {projectMembers.map((member) => (
                     <div key={member.id} className="-mr-1.5" title={member.name}>
-                      <Avatar name={member.name} color={member.color} size={28} />
+                      <Avatar name={member.name} color={member.color} photo={member.photo} size={28} />
                     </div>
                   ))}
                 </div>
@@ -89,7 +89,7 @@ export default function TeamView() {
                   style={getMemberCardVars(member.color)}
                 >
                   <div className="flex items-center gap-3 border-b border-b-[var(--member-header-line)] bg-[var(--member-header-bg)] px-4 py-3.5">
-                    <Avatar name={member.name} color={member.color} size={32} />
+                    <Avatar name={member.name} color={member.color} photo={member.photo} size={32} />
                     <div>
                       <p className="text-sm font-semibold text-copy">{member.name}</p>
                       <p className="text-[10px] capitalize text-muted">{member.role}</p>

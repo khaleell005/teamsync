@@ -102,7 +102,7 @@ export default function Profile() {
             {form.photo ? (
               <img src={form.photo} alt="Profile" className="h-20 w-20 rounded-full object-cover" />
             ) : (
-              <Avatar name={form.name} color={currentUser.color} size={80} />
+              <Avatar name={form.name} color={currentUser.color} photo={form.photo} size={80} />
             )}
 
             <div>

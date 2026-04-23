@@ -97,7 +97,7 @@ export default function ManageProjects() {
                           : "border-line/70 bg-surface/70 text-muted hover:text-copy"
                       }`}
                     >
-                      <Avatar name={user.name} color={user.color} size={20} />
+                      <Avatar name={user.name} color={user.color} photo={user.photo} size={20} />
                       <span>{user.name}</span>
                     </button>
                   ))}
@@ -126,7 +126,7 @@ export default function ManageProjects() {
                           : "border-line/70 bg-surface/70 text-muted hover:text-copy"
                       }`}
                     >
-                      <Avatar name={user.name} color={user.color} size={20} />
+                      <Avatar name={user.name} color={user.color} photo={user.photo} size={20} />
                       <span>{user.name}</span>
                     </button>
                   ))}
@@ -161,14 +161,14 @@ export default function ManageProjects() {
                   {project.leadId && getUser(project.leadId) && (
                     <div className="mr-2 flex items-center gap-1.5">
                       <span className="text-[10px] text-muted">Lead:</span>
-                      <Avatar name={getUser(project.leadId).name} color={getUser(project.leadId).color} size={22} />
+                      <Avatar name={getUser(project.leadId).name} color={getUser(project.leadId).color} photo={getUser(project.leadId).photo} size={22} />
                     </div>
                   )}
                   {project.memberIds.map((memberId) => {
                     const member = getUser(memberId)
                     return member && member.id !== project.leadId ? (
                       <div key={memberId} className="-mr-1.5" title={member.name}>
-                        <Avatar name={member.name} color={member.color} size={26} />
+                        <Avatar name={member.name} color={member.color} photo={member.photo} size={26} />
                       </div>
                     ) : null
                   })}
